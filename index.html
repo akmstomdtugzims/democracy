@@ -544,33 +544,33 @@ class Game {
     this.resetGame();
   }
 
-  // 元の敵名称・スキル名に戻した初期化処理
+  // 敵スキル
   initEnemies() {
     return [
       { 
-        name: "世論工作", 
+        name: "スマホ農場", 
         skillName: "デマ拡散", 
         cdMax: 3,
         desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
         action: () => { this.damagePlayer(25); this.convertQuestionToFake(); } 
       },
       { 
-        name: "不透明な政治決定", 
-        skillName: "ブラックボックス化", 
+        name: "捏造報道局", 
+        skillName: "スピン報道", 
         cdMax: 3,
         desc: "25ダメージ＋盤面シャッフル＆2マス非開示化", 
         action: () => { this.damagePlayer(25); this.shuffleBoard(); this.applyBlackout(2); } 
       },
       { 
-        name: "強権的な態度", 
-        skillName: "情報遮断", 
+        name: "隠蔽議員", 
+        skillName: "答弁は差し控えさせていただきます", 
         cdMax: 3,
-        desc: "25ダメージ＋既存の4マスを非開示マスに変更", 
+        desc: "25ダメージ＋4マスを非開示化", 
         action: () => { this.damagePlayer(25); this.applyBlackout(4); } 
       },
       { 
-        name: "利権構造", 
-        skillName: "買収工作", 
+        name: "盲従人材育成連合", 
+        skillName: "買収", 
         cdMax: 3,
         desc: "25ダメージ＋パーティ2名を買収(無効化)", 
         action: () => { this.damagePlayer(25); this.bribeMember(); this.bribeMember(); } 
