@@ -12,7 +12,7 @@
       --border-color: #dee2e6;
       --accent-red: #d90429;
       --accent-blue: #0077b6;
-      --accent-green: #00b4d8; /* 気力ゲージ用の水色へ変更 */
+      --accent-green: #00b4d8;
     }
 
     * {
@@ -60,7 +60,6 @@
       touch-action: none;
     }
 
-    /* 敵スキルバナー（黒背景・シンプル） */
     #skill-banner {
       position: absolute;
       top: 35%;
@@ -163,7 +162,6 @@
       color: #111;
     }
 
-    /* 抑圧度ゲージ上のテキスト色調整 */
     .bar-container:has(.enemy-hp-fill) .bar-text {
       color: #ffffff;
     }
@@ -338,7 +336,7 @@
       <span>score: <strong id="score-display">0</strong> pt</span>
     </div>
     
-    <!-- 抑圧度（抑圧度ゲージ） -->
+    <!-- 抑圧度 -->
     <div class="bar-container">
       <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
       <div id="oppression-hp-text" class="bar-text">抑圧度 2500 / 2500</div>
@@ -349,13 +347,13 @@
       <span class="enemy-status-text" id="enemy-turn-info">3ターン後 世論誘導広報室【<strong>プロパガンダ</strong>】<br><span style="font-size:0.7rem; color:#666;">（25ダメージ＋抑圧度回復+100）</span></span>
     </div>
 
-    <!-- 気力（気力ゲージ） -->
+    <!-- 気力 -->
     <div class="bar-container">
       <div id="player-hp" class="bar-fill player-hp-fill"></div>
       <div id="player-hp-text" class="bar-text">気力 100 / 100</div>
     </div>
     
-    <!-- パーティー（メンバー表示） & 効果 -->
+    <!-- パーティー & 効果 -->
     <div class="party-section">
       <div class="party-list" id="party-display"></div>
       <div class="buff-detail" id="buff-detail-text">効果: 計算中...</div>
@@ -388,7 +386,7 @@
       </thead>
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>15 pt</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示マスを解除</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
         <tr><td>対話</td><td>💖</td><td>気力 12 回復 + 買収1名解除</td></tr>
@@ -405,7 +403,6 @@
      ========================================================================== */
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
-  // 抑圧度上限を引き上げて高難易度化
   const TOTAL_OPPRESSION_MAX = 2500;
 
   const DROPS = {
@@ -420,7 +417,7 @@
   const JOBS = [
     { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: すべての効果を +15% 強化" },
     { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解除" },
-    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の効果 1.8 倍" },
+    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」効果1.8倍 & 検証時の非開示解除数+1" },
     { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話💖」による気力回復量 +50%" },
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
@@ -537,13 +534,12 @@
     gameState.bribedMembers = [false, false, false, false, false];
     gameState.popups = [];
     
-    setupEnemy(-1); // ランダムに敵を抽出
+    setupEnemy(-1);
     createBoard();
     updateUI();
     drawBoard();
   }
 
-  // 敵のセットアップ（順不同・ランダム選出）
   function setupEnemy(prevIdx) {
     let nextIdx;
     do {
@@ -555,13 +551,16 @@
   }
 
   function calculateBuffs() {
-    let baseBuffs = { verifyMult: 1.0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
+    let baseBuffs = { verifyMult: 1.0, reporterCount: 0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
 
     gameState.party.forEach((id, idx) => {
       if (gameState.bribedMembers[idx]) return;
 
       if (id === "lawyer") baseBuffs.lawyerCount++;
-      if (id === "reporter") baseBuffs.verifyMult *= 1.8;
+      if (id === "reporter") {
+        baseBuffs.verifyMult *= 1.8;
+        baseBuffs.reporterCount++;
+      }
       if (id === "politician") baseBuffs.healMult += 0.50;
       if (id === "expert") baseBuffs.comboBonus += 0.15;
       if (id === "citizen") baseBuffs.citizenCount++;
@@ -594,7 +593,6 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  // ドラッグ開始（非開示マスもつかめるように変更）
   function startDrag(e) {
     if (gameState.animating) return;
     const pos = getPos(e);
@@ -610,7 +608,6 @@
     }
   }
 
-  // ドラッグ中（非开示マスとの移動・入れ替えを許可）
   function drag(e) {
     if (!gameState.dragState.isDragging || gameState.animating) return;
     const pos = getPos(e);
@@ -633,7 +630,6 @@
     drawBoard();
   }
 
-  // ドラッグ終了（マッチ不成立でもそのまま移動を確定させてターン消費）
   async function endDrag() {
     if (!gameState.dragState.isDragging) return;
     gameState.dragState.isDragging = false;
@@ -646,7 +642,6 @@
       return;
     }
 
-    // マスを直接入れ替える
     let temp = gameState.board[start.r][start.c];
     gameState.board[start.r][start.c] = gameState.board[target.r][target.c];
     gameState.board[target.r][target.c] = temp;
@@ -655,7 +650,6 @@
     if (matches.length > 0) {
       processMatches();
     } else {
-      // マッチが成立しなくてもロールバックせず移動確定・ターン消費
       drawBoard();
       endTurn();
     }
@@ -702,6 +696,12 @@
 
           turnDamage += finalPower;
           gameState.score += finalPower;
+
+          // 「検証🔍」発生時、非開示マスを解除する処理を追加
+          if (t.type === "VERIFY") {
+            let revealCount = 1 + buffs.reporterCount; // 記者がいれば解除数増加
+            revealBlackout(revealCount);
+          }
         }
       });
 
@@ -725,7 +725,6 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // マッチ判定（非開示マスが含まれる場合は絶対に揃わない）
   function findMatches() {
     let matched = [];
     for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
@@ -825,7 +824,6 @@
     updateUI();
     drawBoard();
 
-    // 勝敗判定（テーマに準拠した和名タイトル表現へ調整）
     if (gameState.oppressionHp <= 0) {
       showResultModal(true, "【市民運動の勝利】<br>構造的抑圧を打ち破り、民主主義を勝ち取りました！");
     } else if (gameState.playerHp <= 0) {
@@ -1021,7 +1019,7 @@
     let descLines = [];
     if (buffs.citizenMult > 1) descLines.push(`連帯+${Math.round((buffs.citizenMult-1)*100)}%`);
     if (buffs.lawyerCount > 0) descLines.push(`3Tごとに非開示解除${2*buffs.lawyerCount}マス`);
-    if (buffs.verifyMult > 1) descLines.push(`検証1.8倍`);
+    if (buffs.reporterCount > 0) descLines.push(`検証1.8倍/解除+${buffs.reporterCount}`);
     if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
