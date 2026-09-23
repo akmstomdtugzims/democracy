@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -124,6 +126,25 @@
       margin-bottom: 4px;
     }
 
+    .section-title-enemy {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: var(--accent-red);
+      border-bottom: 1px solid #ffc9c9;
+      padding-bottom: 2px;
+      margin-bottom: 4px;
+    }
+
+    .section-title-player {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: var(--accent-green);
+      border-bottom: 1px solid #b7efc5;
+      padding-bottom: 2px;
+      margin-top: 6px;
+      margin-bottom: 4px;
+    }
+
     .enemy-box {
       background: #fff0f0;
       border: 1px solid #ffc9c9;
@@ -133,9 +154,9 @@
     }
 
     .enemy-status-text {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: bold;
-      color: var(--accent-red);
+      color: var(--text-main);
     }
 
     .bar-container {
@@ -180,6 +201,7 @@
     .party-list {
       display: flex;
       justify-content: space-around;
+      margin-bottom: 4px;
     }
 
     .party-member-card {
@@ -212,7 +234,6 @@
       background: #f1f3f5;
       padding: 4px;
       border-radius: 4px;
-      margin-top: 4px;
       line-height: 1.2;
     }
 
@@ -332,40 +353,35 @@
     </div>
   </div>
 
-  <!-- Status -->
+  <!-- Status Panel -->
   <div class="status-panel">
-    <div class="info-row">
+    <div class="info-row" style="margin-bottom:6px;">
       <span>残りターン: <strong id="rem-turns" style="color:var(--accent-blue); font-size:1rem;">20</strong></span>
       <span>score: <strong id="score-display">0</strong> pt</span>
     </div>
     
-    <!-- 抑圧度ゲージ（常時表示） -->
-    <div class="enemy-box">
-      <div class="info-row">
-        <span class="enemy-status-text" id="enemy-turn-info">世論誘導広報室のプロパガンダまであと 3 ターン</span>
-      </div>
-      <div class="bar-container">
-        <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
-        <div id="oppression-hp-text" class="bar-text">抑圧度 1000 / 1000</div>
-      </div>
+    <!-- 2. 抑圧度（抑圧度ゲージ） -->
+    <div class="bar-container">
+      <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
+      <div id="oppression-hp-text" class="bar-text">抑圧度 1000 / 1000</div>
     </div>
 
-    <div class="info-row" style="margin-bottom:2px;">
-      <span>市民の気力 (毎ターン自然減少: <span id="decay-rate-text">-3</span>)</span>
+    <!-- 3. 次の行動 -->
+    <div class="info-row" style="margin-bottom: 6px;">
+      <span class="enemy-status-text" id="enemy-turn-info">次の行動：世論誘導広報室【プロパガンダ】 3ターン後</span>
     </div>
+
+    <!-- 5. 気力（気力ゲージ） -->
     <div class="bar-container">
       <div id="player-hp" class="bar-fill player-hp-fill"></div>
-      <div id="player-hp-text" class="bar-text">100 / 100</div>
+      <div id="player-hp-text" class="bar-text">気力 100 / 100</div>
     </div>
-  </div>
-
-  <!-- Party -->
-  <div class="party-section">
-    <div class="info-row" style="margin-bottom:2px;">
-      <span style="font-size:0.75rem; font-weight:bold;">参加メンバー</span>
+    
+    <!-- 6. パーティー（メンバー表示） & 7. 効果 -->
+    <div class="party-section">
+      <div class="party-list" id="party-display"></div>
+      <div class="buff-detail" id="buff-detail-text">効果: 計算中...</div>
     </div>
-    <div class="party-list" id="party-display"></div>
-    <div class="buff-detail" id="buff-detail-text">強化内訳: 計算中...</div>
   </div>
 
   <!-- Canvas -->
@@ -393,10 +409,10 @@
         <tr><th>名前</th><th>アイコン</th><th>効果</th></tr>
       </thead>
       <tbody>
-        <tr><td>疑問</td><td>💬</td><td>抑圧削り 15 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>抑圧削り 25 pt</td></tr>
-        <tr><td>署名</td><td>📜</td><td>抑圧削り 35 pt</td></tr>
-        <tr><td>デモ</td><td>🪧</td><td>抑圧削り 35 pt</td></tr>
+        <tr><td>疑問</td><td>💬</td><td>15 pt</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>25 pt</td></tr>
+        <tr><td>署名</td><td>📜</td><td>35 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>35 pt</td></tr>
         <tr><td>対話</td><td>💖</td><td>気力 15 回復 + 買収1名解除</td></tr>
       </tbody>
     </table>
@@ -423,7 +439,7 @@
   const DROP_KEYS = Object.keys(DROPS);
 
   const JOBS = [
-    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 全計算の最後に抑圧への効果を +15% 強化" },
+    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: すべての効果を +15% 強化" },
     { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解明" },
     { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の効果 2.0 倍" },
     { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話💖」による気力回復量 +50%" },
@@ -951,12 +967,11 @@
   function updateUI() {
     document.getElementById("rem-turns").innerText = gameState.remainingTurns;
     document.getElementById("score-display").innerText = gameState.score;
-    document.getElementById("decay-rate-text").innerText = `-${gameState.baseDecayRate}`;
     document.getElementById("player-hp").style.width = `${gameState.playerHp}%`;
     document.getElementById("player-hp-text").innerText = `気力 ${gameState.playerHp} / 100`;
 
     const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
-    document.getElementById("enemy-turn-info").innerText = `${currentEnemy.name}の${currentEnemy.skillName}まであと ${gameState.enemyCd} ターン`;
+    document.getElementById("enemy-turn-info").innerText = `次の行動：${currentEnemy.name}【${currentEnemy.skillName}】 ${gameState.enemyCd}ターン後`;
     
     document.getElementById("oppression-hp").style.width = `${(gameState.oppressionHp / TOTAL_OPPRESSION_MAX) * 100}%`;
     document.getElementById("oppression-hp-text").innerText = `抑圧度 ${gameState.oppressionHp} / ${TOTAL_OPPRESSION_MAX}`;
@@ -987,7 +1002,7 @@
     if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
-    document.getElementById("buff-detail-text").innerText = "有効強化: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（無効化中）");
+    document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（無効化中）");
   }
 
   function showSkillBanner(enemyName, skillName, effectDesc) {
@@ -1066,7 +1081,7 @@
       `;
       restartBtn.innerText = "もう一度プレイ";
     } else {
-      title.innerText = "気力喪失・抑圧維持";
+      title.innerText = "気力喪失";
       title.style.color = "var(--accent-red)";
       body.innerHTML = `
         最終 score: ${gameState.score} pt<br>
