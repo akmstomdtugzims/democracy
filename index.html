@@ -12,8 +12,16 @@
       --border-color: #dee2e6;
       --accent-red: #d90429;
       --accent-blue: #0077b6;
+      --accent-green: #2b9348;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
@@ -24,6 +32,8 @@
       min-height: 100vh;
       overflow: hidden;
     }
+
+    /* レイアウト・コンテナ */
     #game-container {
       width: 100%;
       max-width: 420px;
@@ -36,154 +46,335 @@
       position: relative;
     }
 
-    /* 被弾・スキル発動フラッシュ */
+    .canvas-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #ffffff;
+      border: 2px solid #ced4da;
+      border-radius: 8px;
+      touch-action: none;
+    }
+
+    /* エフェクト・オーバーレイ */
+    #flash-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+
     @keyframes damage-flash {
       0% { background-color: rgba(217, 4, 41, 0.4); }
       100% { background-color: transparent; }
     }
-    .flash-effect { animation: damage-flash 0.5s ease-out; }
-    
-    /* 敵スキルテキストカットイン演出 */
+
+    .flash-effect {
+      animation: damage-flash 0.5s ease-out;
+    }
+
     #skill-banner {
       position: absolute;
-      top: 40%; left: 0; width: 100%;
+      top: 35%;
+      left: 0;
+      width: 100%;
       background: rgba(217, 4, 41, 0.95);
       color: #fff;
       text-align: center;
-      padding: 12px 0;
+      padding: 10px 12px;
       font-weight: bold;
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       z-index: 60;
       display: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       pointer-events: none;
+      line-height: 1.4;
     }
 
-    .header-bar {
-      display: flex; justify-content: space-between; align-items: center;
+    #skill-banner .skill-effect-text {
+      font-size: 0.8rem;
+      color: #ffcccc;
+      font-weight: normal;
+      display: block;
+      margin-top: 2px;
     }
-    .game-title { font-size: 1.1rem; font-weight: bold; }
+
+    /* ヘッダー・ステータスパネル */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .game-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
     .header-btns button {
-      background: #e9ecef; border: 1px solid #ced4da;
-      padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
     }
 
     .status-panel {
       background: var(--panel-bg);
       border: 1px solid var(--border-color);
-      border-radius: 6px; padding: 8px; font-size: 0.8rem;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.8rem;
     }
-    .info-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
-    
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
     .enemy-box {
-      background: #fff0f0; border: 1px solid #ffc9c9;
-      padding: 6px; border-radius: 4px; margin-bottom: 6px;
+      background: #fff0f0;
+      border: 1px solid #ffc9c9;
+      padding: 6px;
+      border-radius: 4px;
+      margin-bottom: 6px;
     }
-    .enemy-name { font-weight: bold; color: var(--accent-red); font-size: 0.9rem; }
 
+    .enemy-name {
+      font-weight: bold;
+      color: var(--accent-red);
+      font-size: 0.9rem;
+    }
+
+    /* ゲージバー */
     .bar-container {
-      background: #e9ecef; height: 12px; border-radius: 6px;
-      overflow: hidden; position: relative; border: 1px solid #ced4da; margin-bottom: 4px;
-    }
-    .bar-fill { height: 100%; transition: width 0.3s ease; }
-    .player-hp-fill { background: #2b9348; width: 100%; }
-    .enemy-hp-fill { background: #d90429; width: 100%; }
-    .bar-text {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.65rem; font-weight: bold; color: #111;
+      background: #e9ecef;
+      height: 14px;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #ced4da;
+      margin-bottom: 4px;
     }
 
-    .party-section {
-      background: var(--panel-bg); border: 1px solid var(--border-color);
-      border-radius: 6px; padding: 6px;
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
     }
-    .party-list { display: flex; justify-content: space-around; }
-    .party-member-card { text-align: center; font-size: 0.65rem; position: relative; }
-    .member-icon { font-size: 1.3rem; }
-    
-    /* 買収状態（バツ印・グレーアウト） */
-    .bribed { filter: grayscale(100%); opacity: 0.5; }
+
+    .player-hp-fill { background: var(--accent-green); width: 100%; }
+    .enemy-hp-fill { background: var(--accent-red); width: 100%; }
+
+    .bar-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #111;
+    }
+
+    /* パーティセクション */
+    .party-section {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px;
+    }
+
+    .party-list {
+      display: flex;
+      justify-content: space-around;
+    }
+
+    .party-member-card {
+      text-align: center;
+      font-size: 0.65rem;
+      position: relative;
+    }
+
+    .member-icon {
+      font-size: 1.3rem;
+    }
+
+    .bribed {
+      filter: grayscale(100%);
+      opacity: 0.5;
+    }
+
     .bribed::after {
-      content: "❌"; position: absolute; top: 0; left: 50%;
-      transform: translateX(-50%); font-size: 1.2rem;
+      content: "❌";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.2rem;
     }
 
     .buff-detail {
-      font-size: 0.68rem; color: #495057; background: #f1f3f5;
-      padding: 4px; border-radius: 4px; margin-top: 4px; line-height: 1.2;
+      font-size: 0.68rem;
+      color: #495057;
+      background: #f1f3f5;
+      padding: 4px;
+      border-radius: 4px;
+      margin-top: 4px;
+      line-height: 1.2;
     }
 
-    .canvas-container {
-      width: 100%; display: flex; justify-content: center; align-items: center; position: relative;
-    }
-    canvas {
-      background: #ffffff; border: 2px solid #ced4da; border-radius: 8px; touch-action: none;
-    }
-
+    /* モーダル UI */
     .modal {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255, 255, 255, 0.98); display: none;
-      flex-direction: column; padding: 16px; z-index: 100; overflow-y: auto;
-    }
-    .modal h2 { margin-bottom: 8px; font-size: 1.2rem; text-align: center; }
-    .btn {
-      background: #212529; color: #fff; border: none;
-      padding: 8px 16px; font-size: 0.85rem; font-weight: bold;
-      border-radius: 16px; cursor: pointer; margin: 8px auto 0; display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.98);
+      display: none;
+      flex-direction: column;
+      padding: 16px;
+      z-index: 100;
+      overflow-y: auto;
     }
 
-    .select-grid { display: flex; gap: 4px; justify-content: center; margin-bottom: 12px; }
+    .modal h2 {
+      margin-bottom: 8px;
+      font-size: 1.2rem;
+      text-align: center;
+    }
+
+    .btn {
+      background: var(--text-main);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      border-radius: 16px;
+      cursor: pointer;
+      margin: 8px auto 0;
+      display: block;
+    }
+
+    .select-grid {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
     .select-slot {
-      width: 50px; height: 50px; border: 2px dashed #aaa; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer;
+      width: 50px;
+      height: 50px;
+      border: 2px dashed #aaa;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
     }
-    .job-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+
+    .job-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
     .job-item {
-      display: flex; align-items: center; justify-content: space-between;
-      background: #f8f9fa; border: 1px solid #dee2e6; padding: 6px 10px; border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      border-radius: 6px;
     }
-    .job-info { font-size: 0.75rem; }
-    .job-info div:first-child { font-weight: bold; }
-    .add-btn { background: var(--accent-blue); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
-    
-    .drop-info-table { font-size: 0.7rem; width: 100%; border-collapse: collapse; margin-top: 8px; }
-    .drop-info-table th, .drop-info-table td { border: 1px solid #dee2e6; padding: 4px; text-align: center; }
+
+    .job-info {
+      font-size: 0.75rem;
+    }
+
+    .job-info div:first-child {
+      font-weight: bold;
+    }
+
+    .add-btn {
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .drop-info-table {
+      font-size: 0.7rem;
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .drop-info-table th,
+    .drop-info-table td {
+      border: 1px solid var(--border-color);
+      padding: 4px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
 <div id="game-container">
-  <div id="flash-layer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:50;"></div>
+  <div id="flash-layer"></div>
   <div id="skill-banner"></div>
 
+  <!-- Header -->
   <div class="header-bar">
-    <span class="game-title">Democracy</span>
+    <span class="game-title">Democracy Puzzle</span>
     <div class="header-btns">
-      <button onclick="openPartyModal()">パーティ選択</button>
-      <button onclick="initGame()">リセット</button>
+      <button id="btn-party-open">パーティ選択</button>
+      <button id="btn-reset">リセット</button>
     </div>
   </div>
 
+  <!-- Status -->
   <div class="status-panel">
     <div class="info-row">
       <span>残りターン: <strong id="rem-turns" style="color:var(--accent-blue); font-size:1rem;">20</strong></span>
-      <span>総累積影響力: <strong id="score-display">0</strong> pt</span>
+      <span>総削減量: <strong id="score-display">0</strong> pt</span>
     </div>
     
     <div class="enemy-box">
       <div class="info-row">
-        <span class="enemy-name" id="enemy-name">汚職政党</span>
-        <span>行動まで: <strong id="enemy-cd" style="color:var(--accent-red);">3</strong> ターン</span>
+        <span class="enemy-name" id="enemy-name">体制の不条理</span>
+        <span>構造介入まで: <strong id="enemy-cd" style="color:var(--accent-red);">3</strong> ターン</span>
       </div>
       <div class="bar-container">
         <div id="enemy-hp" class="bar-fill enemy-hp-fill"></div>
-        <div id="enemy-hp-text" class="bar-text">権力耐久値 500 / 500</div>
+        <div id="enemy-hp-text" class="bar-text">抑圧度 500 / 500</div>
       </div>
     </div>
 
     <div class="info-row" style="margin-bottom:2px;">
-      <span>市民の関心 (HP)</span>
+      <span>市民の気力 (毎ターン自然減少: <span id="decay-rate-text">-3</span>)</span>
     </div>
     <div class="bar-container">
       <div id="player-hp" class="bar-fill player-hp-fill"></div>
@@ -191,6 +382,7 @@
     </div>
   </div>
 
+  <!-- Party -->
   <div class="party-section">
     <div class="info-row" style="margin-bottom:2px;">
       <span style="font-size:0.75rem; font-weight:bold;">参加メンバー</span>
@@ -199,126 +391,185 @@
     <div class="buff-detail" id="buff-detail-text">強化内訳: 計算中...</div>
   </div>
 
+  <!-- Canvas -->
   <div class="canvas-container">
     <canvas id="puzzleCanvas" width="360" height="300"></canvas>
   </div>
 
+  <!-- Result Modal -->
   <div id="result-modal" class="modal">
     <h2 id="modal-title">結果発表</h2>
     <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0;"></div>
-    <button class="btn" onclick="initGame()">もう一度プレイ</button>
+    <button class="btn" id="btn-result-restart">もう一度プレイ</button>
   </div>
 
+  <!-- Party Select Modal -->
   <div id="party-modal" class="modal">
     <h2>パーティ選択</h2>
     <p style="font-size:0.7rem; color:#666; text-align:center; margin-bottom:8px;">枠を選択してからメンバーを指定（重複可能）</p>
     <div class="select-grid" id="modal-slots"></div>
-    
     <div class="job-list" id="modal-job-list"></div>
 
     <div style="font-size:0.75rem; font-weight:bold; margin-top:8px;">■ 行動ドロップ一覧</div>
     <table class="drop-info-table">
-      <tr><th>名前</th><th>アイコン</th><th>影響力</th></tr>
-      <tr><td>疑問</td><td>💬</td><td>50 pt</td></tr>
-      <tr><td>検証</td><td>🔍</td><td>80 pt</td></tr>
-      <tr><td>署名</td><td>📜</td><td>100 pt</td></tr>
-      <tr><td>デモ</td><td>🪧</td><td>100 pt</td></tr>
-      <tr><td>対話</td><td>💖</td><td>50 回復</td></tr>
+      <thead>
+        <tr><th>名前</th><th>アイコン</th><th>抑圧削り量</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>疑問</td><td>💬</td><td>15 pt</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>25 pt</td></tr>
+        <tr><td>署名</td><td>📜</td><td>35 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>35 pt</td></tr>
+        <tr><td>対話</td><td>💖</td><td>気力 15 回復</td></tr>
+      </tbody>
     </table>
 
-    <button class="btn" onclick="closePartyModal()">決定して戻る</button>
+    <button class="btn" id="btn-party-close">決定して戻る</button>
   </div>
 </div>
 
 <script>
-  const COLS = 6;
-  const ROWS = 5;
-  const TILE_SIZE = 60;
+  /* ==========================================================================
+     1. CONSTANTS & GAME DATA
+     ========================================================================== */
+  const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
 
-  // デモの影響力を100に修正
   const DROPS = {
-    QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 50 },
-    VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 80 },
-    SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 100 },
-    DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 100 },
-    DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "💖", name: "対話", heal: 50 }
+    QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 15 },
+    VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 25 },
+    SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 35 },
+    DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 35 },
+    DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "💖", name: "対話", heal: 15 }
   };
   const DROP_KEYS = Object.keys(DROPS);
 
   const JOBS = [
-    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 全計算の最後に総影響力を +15% 強化" },
+    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 全計算の最後に抑圧削減量を +15% 強化" },
     { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解明" },
-    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の影響力 2.0 倍" },
-    { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話💖」の回復量 +50%" },
+    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の抑圧削減量 2.0 倍" },
+    { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話💖」による気力回復量 +50%" },
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
 
-  // 敵（要求に基づく新しい構成）
   const ENEMIES = [
-    { name: "汚職政党", hpMax: 600, hp: 600, cdMax: 3, skillName: "裏金", desc: "市民の関心に 20 ダメージ", action: () => damagePlayer(20) },
-    { name: "世論誘導広報室", hpMax: 800, hp: 800, cdMax: 3, skillName: "プロパガンダ", desc: "既存の盤面2列を無作為に入れ替え", action: () => shuffleColumns(2) },
-    { name: "悪徳大臣", hpMax: 1000, hp: 1000, cdMax: 2, skillName: "「答弁を差し控えさせていただきます」", desc: "盤面3箇所を非開示化", action: () => applyBlackout(3) },
-    { name: "買収推進室", hpMax: 1200, hp: 1200, cdMax: 4, skillName: "懐柔工作", desc: "メンバー1名を買収し効果を無効化", action: () => bribeMember() },
-    { name: "独裁体制", hpMax: 2000, hp: 2000, cdMax: 3, skillName: "強権発動", desc: "40ダメージ ＋ 盤面4箇所を非開示化", action: () => { damagePlayer(40); applyBlackout(4); } }
+    { 
+      name: "不透明な政治決定", 
+      hpMax: 200, hp: 200, cdMax: 3, 
+      skillName: "閣議決定の強行", 
+      desc: "気力に8ダメージ ＋ 毎ターンの自動消費気力を+2", 
+      action: () => { damagePlayer(8); gameState.baseDecayRate += 2; } 
+    },
+    { 
+      name: "無関心の拡大", 
+      hpMax: 300, hp: 300, cdMax: 3, 
+      skillName: "自己責任論の拡散", 
+      desc: "気力に12ダメージ ＋ 盤面2列のドロップを強制乱雑化", 
+      action: () => { damagePlayer(12); shuffleColumns(2); } 
+    },
+    { 
+      name: "情報隠蔽構造", 
+      hpMax: 400, hp: 400, cdMax: 2, 
+      skillName: "「答弁を差し控えさせていただきます」", 
+      desc: "盤面3箇所を黒塗り（非開示）化", 
+      action: () => applyBlackout(3) 
+    },
+    { 
+      name: "利権・分断工作", 
+      hpMax: 500, hp: 500, cdMax: 4, 
+      skillName: "懐柔と分断", 
+      desc: "気力に15ダメージ ＋ メンバー1名を無効化", 
+      action: () => { damagePlayer(15); bribeMember(); } 
+    },
+    { 
+      name: "強権的抑圧体制", 
+      hpMax: 800, hp: 800, cdMax: 3, 
+      skillName: "強権発動", 
+      desc: "気力に25ダメージ ＋ 盤面4箇所を黒塗り化", 
+      action: () => { damagePlayer(25); applyBlackout(4); } 
+    }
   ];
 
+  /* ==========================================================================
+     2. GAME STATE
+     ========================================================================== */
+  const gameState = {
+    board: [],
+    remainingTurns: TOTAL_TURNS,
+    score: 0,
+    playerHp: 100,
+    baseDecayRate: 3,
+    currentEnemyIdx: 0,
+    enemyCd: 0,
+    elapsedTurns: 0,
+    party: [],
+    partyIconIndices: [],
+    bribedMembers: [false, false, false, false, false],
+    selectedSlot: 0,
+    popups: [],
+    dragState: {
+      isDragging: false,
+      currentTile: { r: 0, c: 0 },
+      dragPos: { x: 0, y: 0 }
+    },
+    animating: false
+  };
+
+  /* ==========================================================================
+     3. DOM ELEMENTS & INITIALIZATION
+     ========================================================================== */
   let canvas, ctx;
-  let board = [];
-  let remainingTurns = TOTAL_TURNS;
-  let score = 0;
-  let playerHp = 100;
-  let currentEnemyIdx = 0;
-  let enemyCd = 0;
-  let elapsedTurns = 0;
 
-  let party = [];
-  let partyIconIndices = [];
-  let bribedMembers = [false, false, false, false, false]; // 買収フラグ
-  let selectedSlot = 0;
-
-  let isDragging = false;
-  let currentTile = { r: 0, c: 0 };
-  let dragPos = { x: 0, y: 0 };
-  let animating = false;
-
-  let popups = [];
-
-  window.onload = () => {
+  window.addEventListener("DOMContentLoaded", () => {
     canvas = document.getElementById("puzzleCanvas");
     ctx = canvas.getContext("2d");
 
+    attachEventListeners();
+    randomizeParty();
+    initGame();
+  });
+
+  function attachEventListeners() {
+    // Canvas Mouse Events
     canvas.addEventListener("mousedown", startDrag);
     canvas.addEventListener("mousemove", drag);
     canvas.addEventListener("mouseup", endDrag);
-    canvas.addEventListener("touchstart", (e) => startDrag(e.touches[0]));
-    canvas.addEventListener("touchmove", (e) => drag(e.touches[0]));
+
+    // Canvas Touch Events
+    canvas.addEventListener("touchstart", (e) => startDrag(e.touches[0]), { passive: true });
+    canvas.addEventListener("touchmove", (e) => drag(e.touches[0]), { passive: true });
     canvas.addEventListener("touchend", endDrag);
 
-    randomizeParty();
-    initGame();
-  };
+    // Buttons
+    document.getElementById("btn-party-open").onclick = openPartyModal;
+    document.getElementById("btn-party-close").onclick = closePartyModal;
+    document.getElementById("btn-reset").onclick = initGame;
+    document.getElementById("btn-result-restart").onclick = initGame;
+  }
 
+  /* ==========================================================================
+     4. GAME LIFECYCLE & CORE LOGIC
+     ========================================================================== */
   function randomizeParty() {
-    party = [];
-    partyIconIndices = [];
+    gameState.party = [];
+    gameState.partyIconIndices = [];
     for (let i = 0; i < 5; i++) {
       const randJob = JOBS[Math.floor(Math.random() * JOBS.length)];
-      party.push(randJob.id);
-      partyIconIndices.push(Math.floor(Math.random() * randJob.icons.length));
+      gameState.party.push(randJob.id);
+      gameState.partyIconIndices.push(Math.floor(Math.random() * randJob.icons.length));
     }
   }
 
   function initGame() {
     document.getElementById("result-modal").style.display = "none";
-    remainingTurns = TOTAL_TURNS;
-    score = 0;
-    playerHp = 100;
-    elapsedTurns = 0;
-    bribedMembers = [false, false, false, false, false];
-    popups = [];
+    gameState.remainingTurns = TOTAL_TURNS;
+    gameState.score = 0;
+    gameState.playerHp = 100;
+    gameState.baseDecayRate = 3;
+    gameState.elapsedTurns = 0;
+    gameState.bribedMembers = [false, false, false, false, false];
+    gameState.popups = [];
     
-    // 敵HPの初期化
     ENEMIES.forEach(e => e.hp = e.hpMax);
     setupEnemy(0);
 
@@ -328,16 +579,15 @@
   }
 
   function setupEnemy(idx) {
-    currentEnemyIdx = idx;
-    enemyCd = ENEMIES[idx].cdMax;
+    gameState.currentEnemyIdx = idx;
+    gameState.enemyCd = ENEMIES[idx].cdMax;
   }
 
-  // バフ計算（市民スキルは最後に適用）
   function calculateBuffs() {
     let baseBuffs = { verifyMult: 1.0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
 
-    party.forEach((id, idx) => {
-      if (bribedMembers[idx]) return; // 買収されたメンバーは無効
+    gameState.party.forEach((id, idx) => {
+      if (gameState.bribedMembers[idx]) return;
 
       if (id === "lawyer") baseBuffs.lawyerCount++;
       if (id === "reporter") baseBuffs.verifyMult *= 2.0;
@@ -346,82 +596,356 @@
       if (id === "citizen") baseBuffs.citizenCount++;
     });
 
-    // 市民倍率: 1人あたり+15%
     let citizenMult = 1.0 + (baseBuffs.citizenCount * 0.15);
-
     return { ...baseBuffs, citizenMult };
   }
 
+  /* ==========================================================================
+     5. BOARD & PUZZLE MECHANICS
+     ========================================================================== */
   function createBoard() {
-    board = [];
-    for (let r = 0; r < ROWS; r++) {
-      board[r] = [];
-      for (let c = 0; c < COLS; c++) {
+    gameState.board = [];
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      gameState.board[r] = [];
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
         const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1 };
+        gameState.board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1 };
       }
     }
   }
 
-  // --- 描画 ---
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function startDrag(e) {
+    if (gameState.animating) return;
+    const pos = getPos(e);
+    const c = Math.floor(pos.x / BOARD_CONFIG.TILE_SIZE);
+    const r = Math.floor(pos.y / BOARD_CONFIG.TILE_SIZE);
+
+    if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
+      if (gameState.board[r][c].blackout) return;
+      gameState.dragState.isDragging = true;
+      gameState.dragState.currentTile = { r, c };
+      gameState.dragState.dragPos = pos;
+      drawBoard();
+    }
+  }
+
+  function drag(e) {
+    if (!gameState.dragState.isDragging || gameState.animating) return;
+    gameState.dragState.dragPos = getPos(e);
+    const c = Math.floor(gameState.dragState.dragPos.x / BOARD_CONFIG.TILE_SIZE);
+    const r = Math.floor(gameState.dragState.dragPos.y / BOARD_CONFIG.TILE_SIZE);
+
+    if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
+      const cur = gameState.dragState.currentTile;
+      if (!gameState.board[r][c].blackout && (r !== cur.r || c !== cur.c)) {
+        let temp = gameState.board[cur.r][cur.c];
+        gameState.board[cur.r][cur.c] = gameState.board[r][c];
+        gameState.board[r][c] = temp;
+        gameState.dragState.currentTile = { r, c };
+      }
+    }
+    drawBoard();
+  }
+
+  function endDrag() {
+    if (!gameState.dragState.isDragging) return;
+    gameState.dragState.isDragging = false;
+    drawBoard();
+    processMatches();
+  }
+
+  async function processMatches() {
+    gameState.animating = true;
+    let comboCount = 0;
+    const buffs = calculateBuffs();
+    let turnDamage = 0;
+
+    while (true) {
+      let matches = findMatches();
+      if (matches.length === 0) break;
+
+      comboCount++;
+
+      let avgX = matches.reduce((sum, m) => sum + m.c, 0) / matches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
+      let avgY = matches.reduce((sum, m) => sum + m.r, 0) / matches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
+
+      let matchTypes = [...new Set(matches.map(m => gameState.board[m.r][m.c].type))];
+      let lastName = DROPS[matchTypes[0]] ? DROPS[matchTypes[0]].name : "消去";
+
+      gameState.popups = [{
+        x: avgX, y: avgY - 10,
+        text1: lastName,
+        text2: `${comboCount} combo`,
+        timer: 25
+      }];
+
+      matches.forEach(m => {
+        const t = gameState.board[m.r][m.c];
+        if (t.type === "DIALOGUE") {
+          let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
+          gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
+        } else if (DROPS[t.type]) {
+          let basePower = DROPS[t.type].power;
+          let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
+          let comboMult = 1 + (comboCount - 1) * (0.2 + buffs.comboBonus);
+          
+          let subTotal = basePower * specMult * comboMult;
+          let finalPower = Math.floor(subTotal * buffs.citizenMult);
+
+          turnDamage += finalPower;
+          gameState.score += finalPower;
+        }
+      });
+
+      const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
+      currentEnemy.hp = Math.max(0, currentEnemy.hp - turnDamage);
+
+      updateUI();
+
+      for (let i = 0; i < 5; i++) {
+        drawBoard();
+        await sleep(30);
+      }
+
+      applyGravity(matches);
+      await animateDrop();
+
+      if (currentEnemy.hp <= 0 && gameState.currentEnemyIdx < ENEMIES.length - 1) {
+        setupEnemy(gameState.currentEnemyIdx + 1);
+        updateUI();
+      }
+    }
+
+    gameState.animating = false;
+    endTurn();
+  }
+
+  function findMatches() {
+    let matched = [];
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS - 2; c++) {
+        let t1 = gameState.board[r][c], t2 = gameState.board[r][c+1], t3 = gameState.board[r][c+2];
+        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
+          matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
+        }
+      }
+    }
+    for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+      for (let r = 0; r < BOARD_CONFIG.ROWS - 2; r++) {
+        let t1 = gameState.board[r][c], t2 = gameState.board[r+1][c], t3 = gameState.board[r+2][c];
+        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
+          matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
+        }
+      }
+    }
+    return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
+  }
+
+  function applyGravity(matches) {
+    matches.forEach(m => gameState.board[m.r][m.c] = null);
+
+    for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+      let emptySlots = 0;
+      for (let r = BOARD_CONFIG.ROWS - 1; r >= 0; r--) {
+        if (gameState.board[r][c] === null) {
+          emptySlots++;
+        } else if (emptySlots > 0) {
+          gameState.board[r + emptySlots][c] = gameState.board[r][c];
+          gameState.board[r + emptySlots][c].yOffset = -emptySlots * BOARD_CONFIG.TILE_SIZE;
+          gameState.board[r][c] = null;
+        }
+      }
+      for (let i = 0; i < emptySlots; i++) {
+        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+        gameState.board[i][c] = { type: randomKey, blackout: false, yOffset: -emptySlots * BOARD_CONFIG.TILE_SIZE, scale: 1 };
+      }
+    }
+  }
+
+  function animateDrop() {
+    return new Promise(resolve => {
+      let step = 0;
+      const totalSteps = 4;
+      const interval = setInterval(() => {
+        step++;
+        let hasOffset = false;
+        for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+          for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+            if (gameState.board[r][c] && gameState.board[r][c].yOffset < 0) {
+              gameState.board[r][c].yOffset += BOARD_CONFIG.TILE_SIZE / totalSteps;
+              if (gameState.board[r][c].yOffset > 0) gameState.board[r][c].yOffset = 0;
+              hasOffset = true;
+            }
+          }
+        }
+        drawBoard();
+        if (step >= totalSteps || !hasOffset) {
+          clearInterval(interval);
+          for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+            for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+              if (gameState.board[r][c]) gameState.board[r][c].yOffset = 0;
+            }
+          }
+          drawBoard();
+          resolve();
+        }
+      }, 20);
+    });
+  }
+
+  /* ==========================================================================
+     6. TURN MANAGEMENT & ENEMY ACTIONS
+     ========================================================================== */
+  function endTurn() {
+    gameState.remainingTurns--;
+    gameState.enemyCd--;
+    gameState.elapsedTurns++;
+
+    damagePlayer(gameState.baseDecayRate);
+
+    const buffs = calculateBuffs();
+    if (buffs.lawyerCount > 0 && gameState.elapsedTurns % 3 === 0) {
+      revealBlackout(2 * buffs.lawyerCount);
+    }
+
+    if (gameState.enemyCd <= 0) {
+      const enemy = ENEMIES[gameState.currentEnemyIdx];
+      showSkillBanner(enemy.name, enemy.skillName, enemy.desc);
+      triggerDamageAction();
+      enemy.action();
+      gameState.enemyCd = enemy.cdMax;
+    }
+
+    updateUI();
+    drawBoard();
+
+    if (ENEMIES[ENEMIES.length - 1].hp <= 0) {
+      showResultModal(true, "構造的抑圧の完全打破");
+    } else if (gameState.playerHp <= 0) {
+      showResultModal(false, "気力の完全喪失・社会への無関心化");
+    } else if (gameState.remainingTurns <= 0) {
+      showResultModal(false, "タイムオーバー（抑圧を削り切れず）");
+    }
+  }
+
+  function revealBlackout(count) {
+    let blackouts = [];
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+        if (gameState.board[r][c].blackout) blackouts.push(gameState.board[r][c]);
+      }
+    }
+    for (let i = 0; i < Math.min(count, blackouts.length); i++) {
+      blackouts[i].blackout = false;
+    }
+  }
+
+  function applyBlackout(count) {
+    let targets = [];
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+        if (!gameState.board[r][c].blackout) targets.push(gameState.board[r][c]);
+      }
+    }
+    targets.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(count, targets.length); i++) {
+      targets[i].blackout = true;
+    }
+  }
+
+  function damagePlayer(amount) {
+    gameState.playerHp = Math.max(0, gameState.playerHp - amount);
+  }
+
+  function bribeMember() {
+    let unbribed = [];
+    gameState.party.forEach((_, idx) => {
+      if (!gameState.bribedMembers[idx]) unbribed.push(idx);
+    });
+    if (unbribed.length > 0) {
+      let targetIdx = unbribed[Math.floor(Math.random() * unbribed.length)];
+      gameState.bribedMembers[targetIdx] = true;
+    }
+  }
+
+  function shuffleColumns(colCount) {
+    let cols = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5).slice(0, colCount);
+    cols.forEach(c => {
+      for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+        gameState.board[r][c].type = randomKey;
+      }
+    });
+  }
+
+  /* ==========================================================================
+     7. RENDERING & CANVAS DRAWING
+     ========================================================================== */
   function drawBoard() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
+    const { isDragging, currentTile, dragPos } = gameState.dragState;
+
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
         if (isDragging && currentTile.r === r && currentTile.c === c) continue;
-        drawTile(r, c, board[r][c], c * TILE_SIZE, r * TILE_SIZE + (board[r][c].yOffset || 0));
+        drawTile(r, c, gameState.board[r][c], c * BOARD_CONFIG.TILE_SIZE, r * BOARD_CONFIG.TILE_SIZE + (gameState.board[r][c].yOffset || 0));
       }
     }
 
     if (isDragging) {
-      const tile = board[currentTile.r][currentTile.c];
-      drawTile(currentTile.r, currentTile.c, tile, dragPos.x - TILE_SIZE/2, dragPos.y - TILE_SIZE/2, true);
+      const tile = gameState.board[currentTile.r][currentTile.c];
+      drawTile(currentTile.r, currentTile.c, tile, dragPos.x - BOARD_CONFIG.TILE_SIZE/2, dragPos.y - BOARD_CONFIG.TILE_SIZE/2, true);
     }
 
     updateAndDrawPopups();
   }
 
   function drawTile(r, c, tile, x, y, isDragged = false) {
+    const ts = BOARD_CONFIG.TILE_SIZE;
     ctx.save();
-    ctx.translate(x + TILE_SIZE/2, y + TILE_SIZE/2);
+    ctx.translate(x + ts / 2, y + ts / 2);
     if (tile.scale) ctx.scale(tile.scale, tile.scale);
-    ctx.translate(-TILE_SIZE/2, -TILE_SIZE/2);
+    ctx.translate(-ts / 2, -ts / 2);
 
     const dropData = DROPS[tile.type];
 
     if (tile.blackout) {
       ctx.fillStyle = "#212529";
       ctx.beginPath();
-      ctx.roundRect(3, 3, TILE_SIZE - 6, TILE_SIZE - 6, 8);
+      ctx.roundRect(3, 3, ts - 6, ts - 6, 8);
       ctx.fill();
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("非開示", TILE_SIZE / 2, TILE_SIZE / 2);
+      ctx.fillText("非開示", ts / 2, ts / 2);
     } else {
       ctx.fillStyle = isDragged ? "#ffffff" : (dropData ? dropData.bg : "#eee");
       ctx.strokeStyle = dropData ? dropData.border : "#ccc";
       ctx.lineWidth = isDragged ? 3 : 2;
 
       ctx.beginPath();
-      ctx.roundRect(3, 3, TILE_SIZE - 6, TILE_SIZE - 6, 8);
+      ctx.roundRect(3, 3, ts - 6, ts - 6, 8);
       ctx.fill();
       ctx.stroke();
 
       ctx.font = "28px serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(dropData.symbol, TILE_SIZE / 2, TILE_SIZE / 2);
+      ctx.fillText(dropData.symbol, ts / 2, ts / 2);
     }
     ctx.restore();
   }
 
-  // アニメーション中の画面クリアを徹底し文字残りを防止
   function updateAndDrawPopups() {
-    for (let i = popups.length - 1; i >= 0; i--) {
-      let p = popups[i];
+    for (let i = gameState.popups.length - 1; i >= 0; i--) {
+      let p = gameState.popups[i];
       p.timer--;
       p.y -= 0.5;
 
@@ -439,295 +963,60 @@
 
       ctx.restore();
 
-      if (p.timer <= 0) popups.splice(i, 1);
+      if (p.timer <= 0) gameState.popups.splice(i, 1);
     }
   }
 
-  // --- 操作 ---
-  function getPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  /* ==========================================================================
+     8. UI & MODAL MANAGEMENT
+     ========================================================================== */
+  function updateUI() {
+    document.getElementById("rem-turns").innerText = gameState.remainingTurns;
+    document.getElementById("score-display").innerText = gameState.score;
+    document.getElementById("decay-rate-text").innerText = `-${gameState.baseDecayRate}`;
+    document.getElementById("player-hp").style.width = `${gameState.playerHp}%`;
+    document.getElementById("player-hp-text").innerText = `気力 ${gameState.playerHp} / 100`;
+
+    const enemy = ENEMIES[gameState.currentEnemyIdx];
+    document.getElementById("enemy-name").innerText = enemy.name;
+    document.getElementById("enemy-cd").innerText = gameState.enemyCd;
+    document.getElementById("enemy-hp").style.width = `${(enemy.hp / enemy.hpMax) * 100}%`;
+    document.getElementById("enemy-hp-text").innerText = `抑圧度 ${enemy.hp} / ${enemy.hpMax}`;
+
+    renderPartyDisplay();
+    renderBuffDetails();
   }
 
-  function startDrag(e) {
-    if (animating) return;
-    const pos = getPos(e);
-    const c = Math.floor(pos.x / TILE_SIZE);
-    const r = Math.floor(pos.y / TILE_SIZE);
-    if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-      if (board[r][c].blackout) return;
-      isDragging = true;
-      currentTile = { r, c };
-      dragPos = pos;
-      drawBoard();
-    }
+  function renderPartyDisplay() {
+    const pContainer = document.getElementById("party-display");
+    pContainer.innerHTML = "";
+    gameState.party.forEach((id, idx) => {
+      const job = JOBS.find(j => j.id === id);
+      const icon = job.icons[gameState.partyIconIndices[idx] % job.icons.length];
+      const div = document.createElement("div");
+      div.className = "party-member-card" + (gameState.bribedMembers[idx] ? " bribed" : "");
+      div.innerHTML = `<div class="member-icon">${icon}</div><div>${job.name}</div>`;
+      pContainer.appendChild(div);
+    });
   }
 
-  function drag(e) {
-    if (!isDragging || animating) return;
-    dragPos = getPos(e);
-    const c = Math.floor(dragPos.x / TILE_SIZE);
-    const r = Math.floor(dragPos.y / TILE_SIZE);
-
-    if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-      if (!board[r][c].blackout && (r !== currentTile.r || c !== currentTile.c)) {
-        let temp = board[currentTile.r][currentTile.c];
-        board[currentTile.r][currentTile.c] = board[r][c];
-        board[r][c] = temp;
-        currentTile = { r, c };
-      }
-    }
-    drawBoard();
-  }
-
-  function endDrag() {
-    if (!isDragging) return;
-    isDragging = false;
-    drawBoard();
-    processMatches();
-  }
-
-  // --- マッチ処理 ---
-  async function processMatches() {
-    animating = true;
-    let comboCount = 0;
+  function renderBuffDetails() {
     const buffs = calculateBuffs();
-    let turnDamage = 0;
+    let descLines = [];
+    if (buffs.citizenMult > 1) descLines.push(`削減量+${Math.round((buffs.citizenMult-1)*100)}%`);
+    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解明${2*buffs.lawyerCount}マス`);
+    if (buffs.verifyMult > 1) descLines.push(`検証2倍`);
+    if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
+    if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
-    while (true) {
-      let matches = findMatches();
-      if (matches.length === 0) break;
-
-      comboCount++;
-
-      let avgX = matches.reduce((sum, m) => sum + m.c, 0) / matches.length * TILE_SIZE + TILE_SIZE/2;
-      let avgY = matches.reduce((sum, m) => sum + m.r, 0) / matches.length * TILE_SIZE + TILE_SIZE/2;
-
-      let matchTypes = [...new Set(matches.map(m => board[m.r][m.c].type))];
-      let lastName = DROPS[matchTypes[0]] ? DROPS[matchTypes[0]].name : "消去";
-
-      // ポップアップを毎フレームリセット更新して完全消去
-      popups = [];
-      popups.push({
-        x: avgX, y: avgY - 10,
-        text1: lastName,
-        text2: `${comboCount} combo`,
-        timer: 25
-      });
-
-      matches.forEach(m => {
-        const t = board[m.r][m.c];
-        if (t.type === "DIALOGUE") {
-          let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
-          playerHp = Math.min(100, playerHp + healVal);
-        } else if (DROPS[t.type]) {
-          let basePower = DROPS[t.type].power;
-          let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
-          let comboMult = 1 + (comboCount - 1) * (0.2 + buffs.comboBonus);
-          
-          // 途中計算
-          let subTotal = basePower * specMult * comboMult;
-          // 市民スキル（全体倍率）は最後に乗算
-          let finalPower = Math.floor(subTotal * buffs.citizenMult);
-
-          turnDamage += finalPower;
-          score += finalPower;
-        }
-      });
-
-      // 敵へのダメージ処理
-      const currentEnemy = ENEMIES[currentEnemyIdx];
-      currentEnemy.hp = Math.max(0, currentEnemy.hp - turnDamage);
-
-      updateUI();
-
-      for (let i = 0; i < 5; i++) {
-        drawBoard();
-        await sleep(30);
-      }
-
-      applyGravity(matches);
-      await animateDrop();
-
-      // 敵の撃破チェック
-      if (currentEnemy.hp <= 0 && currentEnemyIdx < ENEMIES.length - 1) {
-        setupEnemy(currentEnemyIdx + 1);
-        updateUI();
-      }
-    }
-
-    animating = false;
-    endTurn();
+    document.getElementById("buff-detail-text").innerText = "有効強化: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（無効化中）");
   }
 
-  function findMatches() {
-    let matched = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS - 2; c++) {
-        let t1 = board[r][c], t2 = board[r][c+1], t3 = board[r][c+2];
-        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
-          matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
-        }
-      }
-    }
-    for (let c = 0; c < COLS; c++) {
-      for (let r = 0; r < ROWS - 2; r++) {
-        let t1 = board[r][c], t2 = board[r+1][c], t3 = board[r+2][c];
-        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
-          matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
-        }
-      }
-    }
-    return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
-  }
-
-  function applyGravity(matches) {
-    matches.forEach(m => board[m.r][m.c] = null);
-
-    for (let c = 0; c < COLS; c++) {
-      let emptySlots = 0;
-      for (let r = ROWS - 1; r >= 0; r--) {
-        if (board[r][c] === null) {
-          emptySlots++;
-        } else if (emptySlots > 0) {
-          board[r + emptySlots][c] = board[r][c];
-          board[r + emptySlots][c].yOffset = -emptySlots * TILE_SIZE;
-          board[r][c] = null;
-        }
-      }
-      for (let i = 0; i < emptySlots; i++) {
-        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        board[i][c] = { type: randomKey, blackout: false, yOffset: -emptySlots * TILE_SIZE, scale: 1 };
-      }
-    }
-  }
-
-  function animateDrop() {
-    return new Promise(resolve => {
-      let step = 0;
-      const totalSteps = 4;
-      const interval = setInterval(() => {
-        step++;
-        let hasOffset = false;
-        for (let r = 0; r < ROWS; r++) {
-          for (let c = 0; c < COLS; c++) {
-            if (board[r][c] && board[r][c].yOffset < 0) {
-              board[r][c].yOffset += TILE_SIZE / totalSteps;
-              if (board[r][c].yOffset > 0) board[r][c].yOffset = 0;
-              hasOffset = true;
-            }
-          }
-        }
-        drawBoard();
-        if (step >= totalSteps || !hasOffset) {
-          clearInterval(interval);
-          for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) if (board[r][c]) board[r][c].yOffset = 0;
-          }
-          drawBoard();
-          resolve();
-        }
-      }, 20);
-    });
-  }
-
-  // --- ターン終了処理 ---
-  function endTurn() {
-    remainingTurns--;
-    enemyCd--;
-    elapsedTurns++;
-
-    const buffs = calculateBuffs();
-
-    // 弁護士スキル条件: 「3ターンに2マス解除」
-    if (buffs.lawyerCount > 0 && elapsedTurns % 3 === 0) {
-      revealBlackout(2 * buffs.lawyerCount);
-    }
-
-    // 敵スキル判定
-    if (enemyCd <= 0) {
-      const enemy = ENEMIES[currentEnemyIdx];
-      showSkillBanner(`${enemy.name} : ${enemy.skillName}`);
-      triggerDamageAction();
-      enemy.action();
-      enemyCd = enemy.cdMax;
-    }
-
-    updateUI();
-    drawBoard();
-
-    // 勝利・敗北判定
-    if (ENEMIES[ENEMIES.length - 1].hp <= 0) {
-      showResultModal(true, "全不当体制の解体");
-    } else if (playerHp <= 0) {
-      showResultModal(false, "市民の無関心・疲弊による敗北");
-    } else if (remainingTurns <= 0) {
-      if (ENEMIES[ENEMIES.length - 1].hp < ENEMIES[ENEMIES.length - 1].hpMax / 2) {
-        showResultModal(true, "任期満了による権力監視の一定成果");
-      } else {
-        showResultModal(false, "会期終了・体制維持");
-      }
-    }
-  }
-
-  function revealBlackout(count) {
-    let blackouts = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (board[r][c].blackout) blackouts.push(board[r][c]);
-      }
-    }
-    for (let i = 0; i < Math.min(count, blackouts.length); i++) {
-      blackouts[i].blackout = false;
-    }
-  }
-
-  function applyBlackout(count) {
-    let targets = [];
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (!board[r][c].blackout) targets.push(board[r][c]);
-      }
-    }
-    targets.sort(() => Math.random() - 0.5);
-    for (let i = 0; i < Math.min(count, targets.length); i++) {
-      targets[i].blackout = true;
-    }
-  }
-
-  function damagePlayer(amount) {
-    playerHp = Math.max(0, playerHp - amount);
-  }
-
-  // 買収スキル: ランダムでメンバー1名を無効化
-  function bribeMember() {
-    let unbribed = [];
-    party.forEach((_, idx) => {
-      if (!bribedMembers[idx]) unbribed.push(idx);
-    });
-    if (unbribed.length > 0) {
-      let targetIdx = unbribed[Math.floor(Math.random() * unbribed.length)];
-      bribedMembers[targetIdx] = true;
-    }
-  }
-
-  // プロパガンダ: 指定列を縦にシャッフル
-  function shuffleColumns(colCount) {
-    let cols = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5).slice(0, colCount);
-    cols.forEach(c => {
-      for (let r = 0; r < ROWS; r++) {
-        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        board[r][c].type = randomKey;
-      }
-    });
-  }
-
-  // 敵スキル名のテキストポップ表示
-  function showSkillBanner(text) {
+  function showSkillBanner(enemyName, skillName, effectDesc) {
     const banner = document.getElementById("skill-banner");
-    banner.innerText = text;
+    banner.innerHTML = `${enemyName} : 【${skillName}】<span class="skill-effect-text">効果: ${effectDesc}</span>`;
     banner.style.display = "block";
-    setTimeout(() => { banner.style.display = "none"; }, 1200);
+    setTimeout(() => { banner.style.display = "none"; }, 2000);
   }
 
   function triggerDamageAction() {
@@ -735,42 +1024,6 @@
     layer.classList.remove("flash-effect");
     void layer.offsetWidth;
     layer.classList.add("flash-effect");
-  }
-
-  // --- UI表示 ---
-  function updateUI() {
-    document.getElementById("rem-turns").innerText = remainingTurns;
-    document.getElementById("score-display").innerText = score;
-    document.getElementById("player-hp").style.width = `${playerHp}%`;
-    document.getElementById("player-hp-text").innerText = `${playerHp} / 100`;
-
-    const enemy = ENEMIES[currentEnemyIdx];
-    document.getElementById("enemy-name").innerText = enemy.name;
-    document.getElementById("enemy-cd").innerText = enemyCd;
-    document.getElementById("enemy-hp").style.width = `${(enemy.hp / enemy.hpMax) * 100}%`;
-    document.getElementById("enemy-hp-text").innerText = `権力耐久値 ${enemy.hp} / ${enemy.hpMax}`;
-
-    // パーティ表示（買収の❌付き）
-    const pContainer = document.getElementById("party-display");
-    pContainer.innerHTML = "";
-    party.forEach((id, idx) => {
-      const job = JOBS.find(j => j.id === id);
-      const icon = job.icons[partyIconIndices[idx] % job.icons.length];
-      const div = document.createElement("div");
-      div.className = "party-member-card" + (bribedMembers[idx] ? " bribed" : "");
-      div.innerHTML = `<div class="member-icon">${icon}</div><div>${job.name}</div>`;
-      pContainer.appendChild(div);
-    });
-
-    const buffs = calculateBuffs();
-    let descLines = [];
-    if (buffs.citizenMult > 1) descLines.push(`総影響力+${Math.round((buffs.citizenMult-1)*100)}%`);
-    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解明${2*buffs.lawyerCount}マス`);
-    if (buffs.verifyMult > 1) descLines.push(`検証2倍`);
-    if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
-    if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
-
-    document.getElementById("buff-detail-text").innerText = "有効強化: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（無効化中）");
   }
 
   function openPartyModal() {
@@ -787,14 +1040,14 @@
   function renderModalSlots() {
     const container = document.getElementById("modal-slots");
     container.innerHTML = "";
-    party.forEach((id, idx) => {
+    gameState.party.forEach((id, idx) => {
       const job = JOBS.find(j => j.id === id);
-      const icon = job.icons[partyIconIndices[idx] % job.icons.length];
+      const icon = job.icons[gameState.partyIconIndices[idx] % job.icons.length];
       const div = document.createElement("div");
       div.className = "select-slot";
-      if (idx === selectedSlot) div.style.borderColor = "var(--accent-blue)";
+      if (idx === gameState.selectedSlot) div.style.borderColor = "var(--accent-blue)";
       div.innerText = icon;
-      div.onclick = () => { selectedSlot = idx; renderModalSlots(); };
+      div.onclick = () => { gameState.selectedSlot = idx; renderModalSlots(); };
       container.appendChild(div);
     });
   }
@@ -811,17 +1064,18 @@
           <div>${iconDisplay} ${job.name}</div>
           <div style="color:#666;">${job.desc}</div>
         </div>
-        <button class="add-btn" onclick="setSlotJob('${job.id}')">枠${selectedSlot + 1}に選択</button>
+        <button class="add-btn" data-jobid="${job.id}">選択</button>
       `;
+      div.querySelector(".add-btn").onclick = () => setSlotJob(job.id);
       container.appendChild(div);
     });
   }
 
   function setSlotJob(jobId) {
     const job = JOBS.find(j => j.id === jobId);
-    party[selectedSlot] = jobId;
-    partyIconIndices[selectedSlot] = Math.floor(Math.random() * job.icons.length);
-    selectedSlot = (selectedSlot + 1) % 5;
+    gameState.party[gameState.selectedSlot] = jobId;
+    gameState.partyIconIndices[gameState.selectedSlot] = Math.floor(Math.random() * job.icons.length);
+    gameState.selectedSlot = (gameState.selectedSlot + 1) % 5;
     renderModalSlots();
   }
 
@@ -831,25 +1085,28 @@
     const body = document.getElementById("modal-body");
 
     if (isClear) {
-      title.innerText = "民主的プロセスの達成";
+      title.innerText = "抑圧の解体・勝利";
       title.style.color = "#2b9348";
       body.innerHTML = `
-        総累積影響力: <strong>${score}</strong> pt<br>
+        総抑圧削減量: <strong>${gameState.score}</strong> pt<br>
         結末: ${reasonText}<br><br>
-        不透明な決定や買収工作に屈せず、市民の監視と対話によって健全な社会構造を守り抜きました。
+        抑圧構造と無関心を完全に打破し、暮らしと個人の尊厳を守り抜くことに成功しました。
       `;
     } else {
-      title.innerText = "権力強行・停滞";
+      title.innerText = "気力喪失・抑圧維持";
       title.style.color = "var(--accent-red)";
       body.innerHTML = `
-        総累積影響力: ${score} pt<br>
+        総抑圧削減量: ${gameState.score} pt<br>
         結末: ${reasonText}<br><br>
-        市民の関心が低下し、十分な検証が行われないまま構造的な不正や不認可が固定化されました。
+        生活を圧迫する決定や理不尽の連続により気力が尽き、体制の抑圧がそのまま固定化されました。
       `;
     }
     modal.style.display = "flex";
   }
 
+  /* ==========================================================================
+     9. UTILS
+     ========================================================================== */
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
