@@ -965,7 +965,7 @@ class Game {
     this.render();
 
     if (this.state.oppressionHp <= 0) {
-      this.showResultModal(true, "【透明性の確保】<br>抑圧を打ち破り、健全な議論の場が取り戻されました。さあ、次は画面の外で。");
+      this.showResultModal(true, "【透明性の確保】<br>抑圧を打ち破り、健全な議論の場が取り戻されました。<br>さあ、次は画面の外で。");
     } else if (this.state.playerHp <= 0) {
       this.showResultModal(false, "【あきらめの連鎖】<br>市民の気力が尽き、社会への無関心が定着してしまいました。");
     } else if (this.state.remainingTurns <= 0) {
