@@ -215,13 +215,13 @@
 
     .bribed {
       filter: grayscale(100%);
-      opacity: 0.5;
+      opacity: 0.4;
     }
 
     .bribed::after {
       content: "❌";
       position: absolute;
-      top: 0;
+      top: -2px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 1.2rem;
@@ -364,12 +364,12 @@
     
     <div class="enemy-box">
       <div class="info-row">
-        <span class="enemy-name" id="enemy-name">体制の不条理</span>
+        <span class="enemy-name" id="enemy-name">汚職政党</span>
         <span>構造介入まで: <strong id="enemy-cd" style="color:var(--accent-red);">3</strong> ターン</span>
       </div>
       <div class="bar-container">
         <div id="enemy-hp" class="bar-fill enemy-hp-fill"></div>
-        <div id="enemy-hp-text" class="bar-text">抑圧度 500 / 500</div>
+        <div id="enemy-hp-text" class="bar-text">抑圧度 200 / 200</div>
       </div>
     </div>
 
@@ -452,40 +452,41 @@
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
 
+  /* 敵データ：要求に従ってスキル・効果を再定義 */
   const ENEMIES = [
     { 
-      name: "不透明な政治決定", 
+      name: "汚職政党", 
       hpMax: 200, hp: 200, cdMax: 3, 
-      skillName: "閣議決定の強行", 
-      desc: "気力に8ダメージ ＋ 毎ターンの自動消費気力を+2", 
-      action: () => { damagePlayer(8); gameState.baseDecayRate += 2; } 
+      skillName: "裏金", 
+      desc: "市民の気力に20ダメージ", 
+      action: () => { damagePlayer(20); } 
     },
     { 
-      name: "無関心の拡大", 
+      name: "世論誘導広報室", 
       hpMax: 300, hp: 300, cdMax: 3, 
-      skillName: "自己責任論の拡散", 
-      desc: "気力に12ダメージ ＋ 盤面2列のドロップを強制乱雑化", 
-      action: () => { damagePlayer(12); shuffleColumns(2); } 
+      skillName: "プロパガンダ工作", 
+      desc: "既存の盤面マスをシャッフル", 
+      action: () => { shuffleAllBoard(); } 
     },
     { 
-      name: "情報隠蔽構造", 
+      name: "悪徳大臣", 
       hpMax: 400, hp: 400, cdMax: 2, 
       skillName: "「答弁を差し控えさせていただきます」", 
-      desc: "盤面3箇所を黒塗り（非開示）化", 
+      desc: "盤面3箇所を非開示マスに変更", 
       action: () => applyBlackout(3) 
     },
     { 
-      name: "利権・分断工作", 
+      name: "買収推進室", 
       hpMax: 500, hp: 500, cdMax: 4, 
-      skillName: "懐柔と分断", 
-      desc: "気力に15ダメージ ＋ メンバー1名を無効化", 
-      action: () => { damagePlayer(15); bribeMember(); } 
+      skillName: "マネーロンダリング買収", 
+      desc: "パーティ枠1名を買収して効果無効化", 
+      action: () => { bribeMember(); } 
     },
     { 
       name: "強権的抑圧体制", 
       hpMax: 800, hp: 800, cdMax: 3, 
       skillName: "強権発動", 
-      desc: "気力に25ダメージ ＋ 盤面4箇所を黒塗り化", 
+      desc: "気力に25ダメージ ＋ 盤面4箇所を非開示化", 
       action: () => { damagePlayer(25); applyBlackout(4); } 
     }
   ];
@@ -587,7 +588,7 @@
     let baseBuffs = { verifyMult: 1.0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
 
     gameState.party.forEach((id, idx) => {
-      if (gameState.bribedMembers[idx]) return;
+      if (gameState.bribedMembers[idx]) return; // 買収されているメンバーは効果無効
 
       if (id === "lawyer") baseBuffs.lawyerCount++;
       if (id === "reporter") baseBuffs.verifyMult *= 2.0;
@@ -873,14 +874,13 @@
     }
   }
 
-  function shuffleColumns(colCount) {
-    let cols = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5).slice(0, colCount);
-    cols.forEach(c => {
-      for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+  function shuffleAllBoard() {
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
         const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
         gameState.board[r][c].type = randomKey;
       }
-    });
+    }
   }
 
   /* ==========================================================================
