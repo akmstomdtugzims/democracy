@@ -393,8 +393,8 @@
     <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0; text-align:center;"></div>
 
     <div class="btn-group">
-      <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
       <button class="btn" id="btn-result-restart">もう一度プレイ</button>
+      <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
     </div>
   </div>
 
@@ -1082,17 +1082,17 @@
 
   function showResultModal(isWin, message) {
     gameState.lastResult = { isWin, score: gameState.score, remTurns: gameState.remainingTurns };
-    document.getElementById("modal-title").innerText = isWin ? "クリア！" : "ゲームオーバー";
+    document.getElementById("modal-title").innerText = isWin ? "クリア" : "ゲームオーバー";
     document.getElementById("modal-body").innerHTML = message + `<br><br>スコア: <strong>${gameState.score}</strong> pt`;
     document.getElementById("result-modal").style.display = "flex";
   }
 
-  function shareToX() {
-    const res = gameState.lastResult;
-    const text = encodeURIComponent(
-      `Democracy Puzzle で遊んだよ！\nスコア: ${res.score} pt\n結果: ${res.isWin ? "クリア成功" : "失敗"}\n#DemocracyPuzzle\n${window.location.href}`
-    );
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+ function shareToX() {
+    const { isWin, score, remTurns } = gameState.lastResult;
+    const statusText = isWin ? "【クリア】健全な議論の場が取り戻されました" : "【ゲームオーバー】社会の無関心に呑み込まれました…";
+    const text = `【Democracy Puzzle】\n${statusText}\nスコア: ${score} pt / 残りターン: ${remTurns}\n`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
   }
 
   function openPartyModal() {
