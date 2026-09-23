@@ -403,7 +403,7 @@
      ========================================================================== */
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
-  const TOTAL_OPPRESSION_MAX = 1800; // 調整: 抑圧度上限を引き上げ
+  const TOTAL_OPPRESSION_MAX = 1800;
 
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
@@ -422,7 +422,7 @@
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
 
-  /* 敵行動データ (威力・妨害性能を上方修正) */
+  /* 敵行動データ */
   const ENEMIES = [
     { 
       name: "世論誘導広報室", 
@@ -474,7 +474,8 @@
     popups: [],
     dragState: {
       isDragging: false,
-      currentTile: { r: 0, c: 0 },
+      startTile: { r: 0, c: 0 },
+      targetTile: { r: 0, c: 0 },
       dragPos: { x: 0, y: 0 }
     },
     animating: false
@@ -565,13 +566,17 @@
      5. BOARD & PUZZLE MECHANICS
      ========================================================================== */
   function createBoard() {
-    gameState.board = [];
-    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
-      gameState.board[r] = [];
-      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
-        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        gameState.board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1 };
+    let validBoard = false;
+    while (!validBoard) {
+      gameState.board = [];
+      for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+        gameState.board[r] = [];
+        for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+          const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+          gameState.board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1 };
+        }
       }
+      if (findMatches().length === 0) validBoard = true;
     }
   }
 
@@ -589,7 +594,8 @@
     if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
       if (gameState.board[r][c].blackout) return;
       gameState.dragState.isDragging = true;
-      gameState.dragState.currentTile = { r, c };
+      gameState.dragState.startTile = { r, c };
+      gameState.dragState.targetTile = { r, c };
       gameState.dragState.dragPos = pos;
       drawBoard();
     }
@@ -597,27 +603,63 @@
 
   function drag(e) {
     if (!gameState.dragState.isDragging || gameState.animating) return;
-    gameState.dragState.dragPos = getPos(e);
-    const c = Math.floor(gameState.dragState.dragPos.x / BOARD_CONFIG.TILE_SIZE);
-    const r = Math.floor(gameState.dragState.dragPos.y / BOARD_CONFIG.TILE_SIZE);
+    const pos = getPos(e);
+    gameState.dragState.dragPos = pos;
 
+    const c = Math.floor(pos.x / BOARD_CONFIG.TILE_SIZE);
+    const r = Math.floor(pos.y / BOARD_CONFIG.TILE_SIZE);
+
+    const start = gameState.dragState.startTile;
+
+    // 上下左右1マス隣の移動のみを検知して確定
     if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
-      const cur = gameState.dragState.currentTile;
-      if (!gameState.board[r][c].blackout && (r !== cur.r || c !== cur.c)) {
-        let temp = gameState.board[cur.r][cur.c];
-        gameState.board[cur.r][cur.c] = gameState.board[r][c];
-        gameState.board[r][c] = temp;
-        gameState.dragState.currentTile = { r, c };
+      const rowDiff = Math.abs(r - start.r);
+      const colDiff = Math.abs(c - start.c);
+
+      if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+        if (!gameState.board[r][c].blackout) {
+          gameState.dragState.targetTile = { r, c };
+          endDrag(); // 移動先が定まった時点で直接ドラッグ終了・判定へ移行
+          return;
+        }
       }
     }
     drawBoard();
   }
 
-  function endDrag() {
+  async function endDrag() {
     if (!gameState.dragState.isDragging) return;
     gameState.dragState.isDragging = false;
-    drawBoard();
-    processMatches();
+
+    const start = gameState.dragState.startTile;
+    const target = gameState.dragState.targetTile;
+
+    // 移動先がない場合は終了
+    if (start.r === target.r && start.c === target.c) {
+      drawBoard();
+      return;
+    }
+
+    // マスを直接入れ替える
+    let temp = gameState.board[start.r][start.c];
+    gameState.board[start.r][start.c] = gameState.board[target.r][target.c];
+    gameState.board[target.r][target.c] = temp;
+
+    let matches = findMatches();
+    if (matches.length > 0) {
+      // マッチ成立（ターン消費処理）
+      processMatches();
+    } else {
+      // マッチ不成立（元の配置に戻す）
+      gameState.animating = true;
+      drawBoard();
+      await sleep(150);
+      let revertTemp = gameState.board[start.r][start.c];
+      gameState.board[start.r][start.c] = gameState.board[target.r][target.c];
+      gameState.board[target.r][target.c] = revertTemp;
+      gameState.animating = false;
+      drawBoard();
+    }
   }
 
   async function processMatches() {
@@ -863,18 +905,18 @@
   function drawBoard() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const { isDragging, currentTile, dragPos } = gameState.dragState;
+    const { isDragging, startTile, dragPos } = gameState.dragState;
 
     for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
       for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
-        if (isDragging && currentTile.r === r && currentTile.c === c) continue;
+        if (isDragging && startTile.r === r && startTile.c === c) continue;
         drawTile(r, c, gameState.board[r][c], c * BOARD_CONFIG.TILE_SIZE, r * BOARD_CONFIG.TILE_SIZE + (gameState.board[r][c].yOffset || 0));
       }
     }
 
     if (isDragging) {
-      const tile = gameState.board[currentTile.r][currentTile.c];
-      drawTile(currentTile.r, currentTile.c, tile, dragPos.x - BOARD_CONFIG.TILE_SIZE/2, dragPos.y - BOARD_CONFIG.TILE_SIZE/2, true);
+      const tile = gameState.board[startTile.r][startTile.c];
+      drawTile(startTile.r, startTile.c, tile, dragPos.x - BOARD_CONFIG.TILE_SIZE/2, dragPos.y - BOARD_CONFIG.TILE_SIZE/2, true);
     }
 
     updateAndDrawPopups();
@@ -951,7 +993,6 @@
     document.getElementById("player-hp-text").innerText = `気力 ${gameState.playerHp} / 100`;
 
     const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
-    // 指示に沿ったテキスト構造へ修正（「次の行動」テキスト排除）
     document.getElementById("enemy-turn-info").innerHTML = `${gameState.enemyCd}ターン後 ${currentEnemy.name}【<strong>${currentEnemy.skillName}</strong>】`;
     
     document.getElementById("oppression-hp").style.width = `${(gameState.oppressionHp / TOTAL_OPPRESSION_MAX) * 100}%`;
@@ -1045,21 +1086,16 @@
     renderModalSlots();
   }
 
-  function showResultModal(isWin, reason) {
+  function showResultModal(isWin, reasonText) {
     const modal = document.getElementById("result-modal");
-    const title = document.getElementById("modal-title");
-    const body = document.getElementById("modal-body");
-
-    title.innerText = isWin ? "勝利！" : "敗北...";
-    title.style.color = isWin ? "var(--accent-green)" : "var(--accent-red)";
-
-    body.innerHTML = `
-      <strong>結果:</strong> ${reason}<br>
-      <strong>最終スコア:</strong> ${gameState.score} pt<br>
-      <strong>残りターン:</strong> ${gameState.remainingTurns}<br>
-      <strong>残り抑圧度:</strong> ${gameState.oppressionHp} / ${TOTAL_OPPRESSION_MAX}
+    document.getElementById("modal-title").innerText = isWin ? "VICTORY" : "GAME OVER";
+    document.getElementById("modal-body").innerHTML = `
+      <div style="text-align:center;">
+        <p style="font-weight:bold; font-size:1.1rem; color:${isWin ? "var(--accent-green)" : "var(--accent-red)"};">${reasonText}</p>
+        <p style="margin-top:12px;">最終スコア: <strong>${gameState.score}</strong> pt</p>
+        <p>残りターン: <strong>${gameState.remainingTurns}</strong></p>
+      </div>
     `;
-
     modal.style.display = "flex";
   }
 </script>
