@@ -233,17 +233,33 @@
       text-align: center;
     }
 
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
     .btn {
       background: var(--text-main);
       color: #fff;
       border: none;
-      padding: 8px 16px;
+      padding: 10px 16px;
       font-size: 0.85rem;
       font-weight: bold;
       border-radius: 16px;
       cursor: pointer;
-      margin: 8px auto 0;
-      display: block;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .btn-share {
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
     .select-grid {
@@ -369,7 +385,11 @@
   <div id="result-modal" class="modal">
     <h2 id="modal-title">結果発表</h2>
     <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0; text-align:center;"></div>
-    <button class="btn" id="btn-result-restart">もう一度プレイ</button>
+    
+    <div class="btn-group">
+      <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
+      <button class="btn" id="btn-result-restart">もう一度プレイ</button>
+    </div>
   </div>
 
   <!-- Party Select Modal -->
@@ -389,11 +409,11 @@
         <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示マスを解除</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
-        <tr><td>対話</td><td>💖</td><td>気力 12 回復 + 買収1名解除</td></tr>
+        <tr><td>対話</td><td>💖</td><td>気力回復 + 買収1名解除（1マッチにつき1人）</td></tr>
       </tbody>
     </table>
 
-    <button class="btn" id="btn-party-close">決定して戻る</button>
+    <button class="btn" id="btn-party-close" style="margin-top:12px;">決定して戻る</button>
   </div>
 </div>
 
@@ -478,7 +498,8 @@
       targetTile: { r: 0, c: 0 },
       dragPos: { x: 0, y: 0 }
     },
-    animating: false
+    animating: false,
+    lastResult: { isWin: false, score: 0, remTurns: 0 }
   };
 
   /* ==========================================================================
@@ -508,6 +529,7 @@
     document.getElementById("btn-party-close").onclick = closePartyModal;
     document.getElementById("btn-reset").onclick = initGame;
     document.getElementById("btn-result-restart").onclick = initGame;
+    document.getElementById("btn-share-x").onclick = shareToX;
   }
 
   /* ==========================================================================
@@ -680,12 +702,14 @@
         timer: 15
       }];
 
+      let hasDialogueMatch = false;
+
       matches.forEach(m => {
         const t = gameState.board[m.r][m.c];
         if (t.type === "DIALOGUE") {
           let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
           gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
-          restoreBribedMember();
+          hasDialogueMatch = true;
         } else if (DROPS[t.type]) {
           let basePower = DROPS[t.type].power;
           let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
@@ -697,13 +721,17 @@
           turnDamage += finalPower;
           gameState.score += finalPower;
 
-          // 「検証🔍」発生時、非開示マスを解除する処理を追加
           if (t.type === "VERIFY") {
-            let revealCount = 1 + buffs.reporterCount; // 記者がいれば解除数増加
+            let revealCount = 1 + buffs.reporterCount;
             revealBlackout(revealCount);
           }
         }
       });
+
+      // 1マッチ処理につき最大1名のみ買収解除
+      if (hasDialogueMatch) {
+        restoreBribedMember();
+      }
 
       gameState.oppressionHp = Math.max(0, gameState.oppressionHp - turnDamage);
       updateUI();
@@ -888,12 +916,17 @@
     }
   }
 
+  // 隣り合わせの初期揃いが発生しない安全なシャッフル
   function shuffleAllBoard() {
-    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
-      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
-        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        gameState.board[r][c].type = randomKey;
+    let validBoard = false;
+    while (!validBoard) {
+      for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+        for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+          const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+          gameState.board[r][c].type = randomKey;
+        }
       }
+      if (findMatches().length === 0) validBoard = true;
     }
   }
 
@@ -1034,9 +1067,24 @@
   }
 
   function showResultModal(isWin, message) {
+    gameState.lastResult = {
+      isWin,
+      score: gameState.score,
+      remTurns: gameState.remainingTurns
+    };
+
     document.getElementById("modal-title").innerText = isWin ? "達成" : "失敗";
-    document.getElementById("modal-body").innerHTML = message + `<br><br>最終スコア: <strong>${gameState.score}</strong> pt`;
+    document.getElementById("modal-body").innerHTML = 
+      `${message}<br><br>スコア: <strong>${gameState.score}</strong> pt<br>残りターン数: <strong>${gameState.remainingTurns}</strong> / ${TOTAL_TURNS}`;
     document.getElementById("result-modal").style.display = "flex";
+  }
+
+  function shareToX() {
+    const { isWin, score, remTurns } = gameState.lastResult;
+    const statusText = isWin ? "市民運動の勝利！" : "社会運動の挫折...";
+    const text = `【Democracy Puzzle】\n結果: ${statusText}\nスコア: ${score} pt\n残りターン数: ${remTurns}/${TOTAL_TURNS}\n\n#DemocracyPuzzle`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
   }
 
   function openPartyModal() {
