@@ -33,7 +33,6 @@
       overflow: hidden;
     }
 
-    /* レイアウト・コンテナ */
     #game-container {
       width: 100%;
       max-width: 420px;
@@ -61,7 +60,6 @@
       touch-action: none;
     }
 
-    /* エフェクト・オーバーレイ */
     #flash-layer {
       position: absolute;
       top: 0;
@@ -107,7 +105,6 @@
       margin-top: 2px;
     }
 
-    /* ヘッダー・ステータスパネル */
     .header-bar {
       display: flex;
       justify-content: space-between;
@@ -151,13 +148,12 @@
       margin-bottom: 6px;
     }
 
-    .enemy-name {
+    .enemy-status-text {
+      font-size: 0.85rem;
       font-weight: bold;
       color: var(--accent-red);
-      font-size: 0.9rem;
     }
 
-    /* ゲージバー */
     .bar-container {
       background: #e9ecef;
       height: 14px;
@@ -190,7 +186,6 @@
       color: #111;
     }
 
-    /* パーティセクション */
     .party-section {
       background: var(--panel-bg);
       border: 1px solid var(--border-color);
@@ -237,7 +232,6 @@
       line-height: 1.2;
     }
 
-    /* モーダル UI */
     .modal {
       position: absolute;
       top: 0;
@@ -359,17 +353,17 @@
   <div class="status-panel">
     <div class="info-row">
       <span>残りターン: <strong id="rem-turns" style="color:var(--accent-blue); font-size:1rem;">20</strong></span>
-      <span>総削減量: <strong id="score-display">0</strong> pt</span>
+      <span>score: <strong id="score-display">0</strong> pt</span>
     </div>
     
+    <!-- 敵個別ゲージを排出し、抑圧度ゲージを常時表示 -->
     <div class="enemy-box">
       <div class="info-row">
-        <span class="enemy-name" id="enemy-name">汚職政党</span>
-        <span>構造介入まで: <strong id="enemy-cd" style="color:var(--accent-red);">3</strong> ターン</span>
+        <span class="enemy-status-text" id="enemy-turn-info">世論誘導広報室のプロパガンダまであと 3 ターン</span>
       </div>
       <div class="bar-container">
-        <div id="enemy-hp" class="bar-fill enemy-hp-fill"></div>
-        <div id="enemy-hp-text" class="bar-text">抑圧度 200 / 200</div>
+        <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
+        <div id="oppression-hp-text" class="bar-text">抑圧度 1000 / 1000</div>
       </div>
     </div>
 
@@ -413,14 +407,14 @@
     <div style="font-size:0.75rem; font-weight:bold; margin-top:8px;">■ 行動ドロップ一覧</div>
     <table class="drop-info-table">
       <thead>
-        <tr><th>名前</th><th>アイコン</th><th>抑圧削り量</th></tr>
+        <tr><th>名前</th><th>アイコン</th><th>効果</th></tr>
       </thead>
       <tbody>
-        <tr><td>疑問</td><td>💬</td><td>15 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>25 pt</td></tr>
-        <tr><td>署名</td><td>📜</td><td>35 pt</td></tr>
-        <tr><td>デモ</td><td>🪧</td><td>35 pt</td></tr>
-        <tr><td>対話</td><td>💖</td><td>気力 15 回復</td></tr>
+        <tr><td>疑問</td><td>💬</td><td>抑圧削り 15 pt</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>抑圧削り 25 pt</td></tr>
+        <tr><td>署名</td><td>📜</td><td>抑圧削り 35 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>抑圧削り 35 pt</td></tr>
+        <tr><td>対話</td><td>💖</td><td>気力 15 回復 + 買収1名解除</td></tr>
       </tbody>
     </table>
 
@@ -434,6 +428,7 @@
      ========================================================================== */
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
+  const TOTAL_OPPRESSION_MAX = 1000;
 
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 15 },
@@ -452,42 +447,35 @@
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
 
-  /* 敵データ：要求に従ってスキル・効果を再定義 */
+  /* 敵行動データ */
   const ENEMIES = [
     { 
-      name: "汚職政党", 
-      hpMax: 200, hp: 200, cdMax: 3, 
-      skillName: "裏金", 
-      desc: "市民の気力に20ダメージ", 
-      action: () => { damagePlayer(20); } 
-    },
-    { 
       name: "世論誘導広報室", 
-      hpMax: 300, hp: 300, cdMax: 3, 
-      skillName: "プロパガンダ工作", 
-      desc: "既存の盤面マスをシャッフル", 
-      action: () => { shuffleAllBoard(); } 
+      skillName: "プロパガンダ", 
+      cdMax: 3,
+      desc: "20ダメージ＋抑圧度ゲージの回復(+50)", 
+      action: () => { damagePlayer(20); recoverOppression(50); } 
     },
     { 
-      name: "悪徳大臣", 
-      hpMax: 400, hp: 400, cdMax: 2, 
-      skillName: "「答弁を差し控えさせていただきます」", 
-      desc: "盤面3箇所を非開示マスに変更", 
-      action: () => applyBlackout(3) 
+      name: "買収された報道", 
+      skillName: "スピン報道", 
+      cdMax: 3,
+      desc: "20ダメージ＋盤面シャッフル", 
+      action: () => { damagePlayer(20); shuffleAllBoard(); } 
+    },
+    { 
+      name: "悪徳政治家", 
+      skillName: "「お答えを差し控えさせていただきます」", 
+      cdMax: 3,
+      desc: "20ダメージ＋既存の3マスを非開示マスに変更", 
+      action: () => { damagePlayer(20); applyBlackout(3); } 
     },
     { 
       name: "買収推進室", 
-      hpMax: 500, hp: 500, cdMax: 4, 
       skillName: "マネーロンダリング買収", 
-      desc: "パーティ枠1名を買収して効果無効化", 
-      action: () => { bribeMember(); } 
-    },
-    { 
-      name: "強権的抑圧体制", 
-      hpMax: 800, hp: 800, cdMax: 3, 
-      skillName: "強権発動", 
-      desc: "気力に25ダメージ ＋ 盤面4箇所を非開示化", 
-      action: () => { damagePlayer(25); applyBlackout(4); } 
+      cdMax: 3,
+      desc: "20ダメージ＋パーティ1名を買収(無効化)", 
+      action: () => { damagePlayer(20); bribeMember(); } 
     }
   ];
 
@@ -498,6 +486,7 @@
     board: [],
     remainingTurns: TOTAL_TURNS,
     score: 0,
+    oppressionHp: TOTAL_OPPRESSION_MAX,
     playerHp: 100,
     baseDecayRate: 3,
     currentEnemyIdx: 0,
@@ -531,17 +520,14 @@
   });
 
   function attachEventListeners() {
-    // Canvas Mouse Events
     canvas.addEventListener("mousedown", startDrag);
     canvas.addEventListener("mousemove", drag);
     canvas.addEventListener("mouseup", endDrag);
 
-    // Canvas Touch Events
     canvas.addEventListener("touchstart", (e) => startDrag(e.touches[0]), { passive: true });
     canvas.addEventListener("touchmove", (e) => drag(e.touches[0]), { passive: true });
     canvas.addEventListener("touchend", endDrag);
 
-    // Buttons
     document.getElementById("btn-party-open").onclick = openPartyModal;
     document.getElementById("btn-party-close").onclick = closePartyModal;
     document.getElementById("btn-reset").onclick = initGame;
@@ -565,15 +551,14 @@
     document.getElementById("result-modal").style.display = "none";
     gameState.remainingTurns = TOTAL_TURNS;
     gameState.score = 0;
+    gameState.oppressionHp = TOTAL_OPPRESSION_MAX;
     gameState.playerHp = 100;
     gameState.baseDecayRate = 3;
     gameState.elapsedTurns = 0;
     gameState.bribedMembers = [false, false, false, false, false];
     gameState.popups = [];
     
-    ENEMIES.forEach(e => e.hp = e.hpMax);
     setupEnemy(0);
-
     createBoard();
     updateUI();
     drawBoard();
@@ -588,7 +573,7 @@
     let baseBuffs = { verifyMult: 1.0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
 
     gameState.party.forEach((id, idx) => {
-      if (gameState.bribedMembers[idx]) return; // 買収されているメンバーは効果無効
+      if (gameState.bribedMembers[idx]) return;
 
       if (id === "lawyer") baseBuffs.lawyerCount++;
       if (id === "reporter") baseBuffs.verifyMult *= 2.0;
@@ -678,11 +663,12 @@
       let matchTypes = [...new Set(matches.map(m => gameState.board[m.r][m.c].type))];
       let lastName = DROPS[matchTypes[0]] ? DROPS[matchTypes[0]].name : "消去";
 
+      // 文字表示タイマーを設定（15フレーム=約0.5秒で消滅）
       gameState.popups = [{
         x: avgX, y: avgY - 10,
         text1: lastName,
         text2: `${comboCount} combo`,
-        timer: 25
+        timer: 15
       }];
 
       matches.forEach(m => {
@@ -690,6 +676,7 @@
         if (t.type === "DIALOGUE") {
           let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
           gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
+          restoreBribedMember(); // 対話で買収状態を1名回復
         } else if (DROPS[t.type]) {
           let basePower = DROPS[t.type].power;
           let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
@@ -703,9 +690,7 @@
         }
       });
 
-      const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
-      currentEnemy.hp = Math.max(0, currentEnemy.hp - turnDamage);
-
+      gameState.oppressionHp = Math.max(0, gameState.oppressionHp - turnDamage);
       updateUI();
 
       for (let i = 0; i < 5; i++) {
@@ -715,11 +700,6 @@
 
       applyGravity(matches);
       await animateDrop();
-
-      if (currentEnemy.hp <= 0 && gameState.currentEnemyIdx < ENEMIES.length - 1) {
-        setupEnemy(gameState.currentEnemyIdx + 1);
-        updateUI();
-      }
     }
 
     gameState.animating = false;
@@ -819,13 +799,16 @@
       showSkillBanner(enemy.name, enemy.skillName, enemy.desc);
       triggerDamageAction();
       enemy.action();
-      gameState.enemyCd = enemy.cdMax;
+
+      // 敵を順繰りに入れ替える
+      const nextEnemyIdx = (gameState.currentEnemyIdx + 1) % ENEMIES.length;
+      setupEnemy(nextEnemyIdx);
     }
 
     updateUI();
     drawBoard();
 
-    if (ENEMIES[ENEMIES.length - 1].hp <= 0) {
+    if (gameState.oppressionHp <= 0) {
       showResultModal(true, "構造的抑圧の完全打破");
     } else if (gameState.playerHp <= 0) {
       showResultModal(false, "気力の完全喪失・社会への無関心化");
@@ -863,6 +846,10 @@
     gameState.playerHp = Math.max(0, gameState.playerHp - amount);
   }
 
+  function recoverOppression(amount) {
+    gameState.oppressionHp = Math.min(TOTAL_OPPRESSION_MAX, gameState.oppressionHp + amount);
+  }
+
   function bribeMember() {
     let unbribed = [];
     gameState.party.forEach((_, idx) => {
@@ -871,6 +858,17 @@
     if (unbribed.length > 0) {
       let targetIdx = unbribed[Math.floor(Math.random() * unbribed.length)];
       gameState.bribedMembers[targetIdx] = true;
+    }
+  }
+
+  function restoreBribedMember() {
+    let bribed = [];
+    gameState.party.forEach((_, idx) => {
+      if (gameState.bribedMembers[idx]) bribed.push(idx);
+    });
+    if (bribed.length > 0) {
+      let targetIdx = bribed[Math.floor(Math.random() * bribed.length)];
+      gameState.bribedMembers[targetIdx] = false;
     }
   }
 
@@ -950,7 +948,7 @@
       p.y -= 0.5;
 
       ctx.save();
-      ctx.globalAlpha = Math.max(0, p.timer / 25);
+      ctx.globalAlpha = Math.max(0, p.timer / 15);
       
       ctx.font = "bold 14px sans-serif";
       ctx.fillStyle = "#d90429";
@@ -977,11 +975,11 @@
     document.getElementById("player-hp").style.width = `${gameState.playerHp}%`;
     document.getElementById("player-hp-text").innerText = `気力 ${gameState.playerHp} / 100`;
 
-    const enemy = ENEMIES[gameState.currentEnemyIdx];
-    document.getElementById("enemy-name").innerText = enemy.name;
-    document.getElementById("enemy-cd").innerText = gameState.enemyCd;
-    document.getElementById("enemy-hp").style.width = `${(enemy.hp / enemy.hpMax) * 100}%`;
-    document.getElementById("enemy-hp-text").innerText = `抑圧度 ${enemy.hp} / ${enemy.hpMax}`;
+    const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
+    document.getElementById("enemy-turn-info").innerText = `${currentEnemy.name}の${currentEnemy.skillName}まであと ${gameState.enemyCd} ターン`;
+    
+    document.getElementById("oppression-hp").style.width = `${(gameState.oppressionHp / TOTAL_OPPRESSION_MAX) * 100}%`;
+    document.getElementById("oppression-hp-text").innerText = `抑圧度 ${gameState.oppressionHp} / ${TOTAL_OPPRESSION_MAX}`;
 
     renderPartyDisplay();
     renderBuffDetails();
@@ -1088,7 +1086,7 @@
       title.innerText = "抑圧の解体・勝利";
       title.style.color = "#2b9348";
       body.innerHTML = `
-        総抑圧削減量: <strong>${gameState.score}</strong> pt<br>
+        最終 score: <strong>${gameState.score}</strong> pt<br>
         結末: ${reasonText}<br><br>
         抑圧構造と無関心を完全に打破し、暮らしと個人の尊厳を守り抜くことに成功しました。
       `;
@@ -1096,7 +1094,7 @@
       title.innerText = "気力喪失・抑圧維持";
       title.style.color = "var(--accent-red)";
       body.innerHTML = `
-        総抑圧削減量: ${gameState.score} pt<br>
+        最終 score: ${gameState.score} pt<br>
         結末: ${reasonText}<br><br>
         生活を圧迫する決定や理不尽の連続により気力が尽き、体制の抑圧がそのまま固定化されました。
       `;
@@ -1104,9 +1102,6 @@
     modal.style.display = "flex";
   }
 
-  /* ==========================================================================
-     9. UTILS
-     ========================================================================== */
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
