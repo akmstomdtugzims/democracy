@@ -501,11 +501,11 @@ const DROPS = {
 const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
 const JOBS = [
-  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 「署名📜」「デモ🪧」威力アップ" },
-  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "違憲審査: 5Tごとに高威力の抑圧削り＆「デマ」を「検証🔍」に変換" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 5Tごとに「疑問💬」を「署名📜」「デモ🪧」に変換" },
-  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量アップ" },
-  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: 「検証🔍」の威力強化＆コンボボーナス" }
+  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民の連帯: 人数増加で全体効果加算（5人で過密弱体化）。「疑問」出現率UP" },
+  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "社会正義の実現: 毎ターン非開示・デマを1マス解除。「署名」出現率UP" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 周期的に全「疑問」を変化（買収時毎ターン悪化）。「デモ」出現率UP" },
+  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "公共の福祉: 「対話」効果UP（買収時DOWN）。「対話」出現率UP" },
+  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "客観性の担保: 「検証」効果UP。「検証」出現率UP" }
 ];
 
 class Game {
@@ -544,7 +544,6 @@ class Game {
     this.resetGame();
   }
 
-  // 敵スキル
   initEnemies() {
     return [
       { 
@@ -552,28 +551,57 @@ class Game {
         skillName: "デマ拡散", 
         cdMax: 3,
         desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
-        action: () => { this.damagePlayer(25); this.convertQuestionToFake(); } 
+        action: () => { 
+          this.damagePlayer(25); 
+          let count = this.convertQuestionToFake();
+          return count > 0;
+        } 
       },
       { 
         name: "捏造報道局", 
         skillName: "スピン報道", 
         cdMax: 3,
         desc: "25ダメージ＋盤面シャッフル＆2マス非開示化", 
-        action: () => { this.damagePlayer(25); this.shuffleBoard(); this.applyBlackout(2); } 
+        action: () => { 
+          this.damagePlayer(25); 
+          this.shuffleBoard(); 
+          this.applyBlackout(2); 
+          return true;
+        } 
       },
       { 
         name: "隠蔽議員", 
         skillName: "答弁は差し控えさせていただきます", 
         cdMax: 3,
         desc: "25ダメージ＋4マスを非開示化", 
-        action: () => { this.damagePlayer(25); this.applyBlackout(4); } 
+        action: () => { 
+          this.damagePlayer(25); 
+          let count = this.applyBlackout(4); 
+          return count > 0;
+        } 
       },
       { 
-        name: "盲従人材育成連合", 
+        name: "懐柔工作財団", 
         skillName: "買収", 
         cdMax: 3,
         desc: "25ダメージ＋パーティ2名を買収(無効化)", 
-        action: () => { this.damagePlayer(25); this.bribeMember(); this.bribeMember(); } 
+        action: () => { 
+          this.damagePlayer(25); 
+          let b1 = this.bribeMember(); 
+          let b2 = this.bribeMember(); 
+          return b1 || b2;
+        } 
+      },
+      {
+        name: "世論誘導広報室",
+        skillName: "プロパガンダ",
+        cdMax: 3,
+        desc: "25ダメージ＋3×3のデママスを発生（2ターンで回復）",
+        action: () => {
+          this.damagePlayer(25);
+          let count = this.applyPropaganda();
+          return count > 0;
+        }
       }
     ];
   }
@@ -660,6 +688,34 @@ class Game {
     document.getElementById("btn-share-other").onclick = () => this.shareOther();
   }
 
+  getRandomDropType() {
+    let weights = {
+      QUESTION: 10,
+      VERIFY: 10,
+      SIGN: 10,
+      DEMO: 10,
+      DIALOGUE: 10
+    };
+
+    this.state.party.forEach((id, idx) => {
+      if (this.state.bribedMembers[idx]) return;
+      if (id === "citizen") weights.QUESTION += 15;
+      if (id === "lawyer") weights.SIGN += 15;
+      if (id === "reporter") weights.DEMO += 15;
+      if (id === "politician") weights.DIALOGUE += 15;
+      if (id === "expert") weights.VERIFY += 15;
+    });
+
+    let totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+    let rand = Math.random() * totalWeight;
+    let sum = 0;
+    for (let key in weights) {
+      sum += weights[key];
+      if (rand <= sum) return key;
+    }
+    return "QUESTION";
+  }
+
   randomizeParty() {
     this.state.party = [];
     this.state.partyIconIndices = [];
@@ -704,6 +760,7 @@ class Game {
     let buffs = { 
       verifyMult: 1.0, 
       reporterCount: 0, 
+      bribedReporterCount: 0,
       comboBonus: 0.0, 
       healMult: 1.0, 
       lawyerCount: 0, 
@@ -714,21 +771,33 @@ class Game {
     };
 
     this.state.party.forEach((id, idx) => {
-      if (this.state.bribedMembers[idx]) return;
+      const isBribed = this.state.bribedMembers[idx];
 
-      if (id === "lawyer") buffs.lawyerCount++;
-      if (id === "reporter") buffs.reporterCount++;
-      if (id === "politician") buffs.healMult += 0.40;
-      if (id === "expert") {
-        buffs.expertCount++;
-        buffs.verifyMult += 0.30;
-        buffs.comboBonus += 0.15;
+      if (!isBribed) {
+        if (id === "lawyer") buffs.lawyerCount++;
+        if (id === "reporter") buffs.reporterCount++;
+        if (id === "politician") buffs.healMult += 0.40;
+        if (id === "expert") {
+          buffs.expertCount++;
+          buffs.verifyMult += 0.40;
+          buffs.comboBonus += 0.15;
+        }
+        if (id === "citizen") buffs.citizenCount++;
+      } else {
+        if (id === "politician") buffs.healMult -= 0.30;
+        if (id === "reporter") buffs.bribedReporterCount++;
       }
-      if (id === "citizen") buffs.citizenCount++;
     });
 
-    buffs.demoMult = 1.0 + (buffs.citizenCount * 0.30);
-    buffs.signMult = 1.0 + (buffs.citizenCount * 0.25);
+    if (buffs.citizenCount === 5) {
+      buffs.demoMult = 0.5;
+      buffs.signMult = 0.5;
+    } else if (buffs.citizenCount > 0) {
+      buffs.demoMult = 1.0 + (buffs.citizenCount * 0.25);
+      buffs.signMult = 1.0 + (buffs.citizenCount * 0.25);
+    }
+
+    if (buffs.healMult < 0.2) buffs.healMult = 0.2;
 
     return buffs;
   }
@@ -740,8 +809,8 @@ class Game {
       for (let r = 0; r < CONFIG.ROWS; r++) {
         this.state.board[r] = [];
         for (let c = 0; c < CONFIG.COLS; c++) {
-          const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-          this.state.board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1 };
+          const randomKey = this.getRandomDropType();
+          this.state.board[r][c] = { type: randomKey, blackout: false, yOffset: 0, scale: 1, propagandaTimer: 0 };
         }
       }
       if (this.findMatches().length === 0) isValid = true;
@@ -778,8 +847,6 @@ class Game {
         timer: 12
       }];
 
-      let hasDialogueMatch = false;
-
       matchGroups.forEach(group => {
         const count = group.tiles.length;
         let matchCountMult = count === 4 ? 1.5 : (count >= 5 ? 2.0 : 1.0);
@@ -789,12 +856,16 @@ class Game {
           if (!t) return;
 
           if (t.type === "DIALOGUE") {
+            let prevHp = this.state.playerHp;
             let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
             this.state.playerHp = Math.min(CONFIG.MAX_PLAYER_HP, this.state.playerHp + healVal);
-            hasDialogueMatch = true;
-            this.cleanseFakeTiles(2);
-            if (!dialogueSkillTriggered) {
-              this.showSkillBanner("対話🤝", "気力回復 / 買収解除 / デマ解消");
+            
+            let hpRestored = this.state.playerHp > prevHp;
+            let cleansedFake = this.cleanseFakeTiles(2);
+            let restoredBribed = this.restoreBribedMember();
+
+            if ((hpRestored || cleansedFake > 0 || restoredBribed) && !dialogueSkillTriggered) {
+              this.showSkillBanner("公共の福祉", "気力回復 / 買収解除 / デマ解消");
               dialogueSkillTriggered = true;
             }
           } else if (t.type === "FAKE") {
@@ -813,18 +884,16 @@ class Game {
             this.state.score += finalPower;
 
             if (t.type === "VERIFY") {
-              this.revealBlackout();
-              this.cleanseFakeTiles(1);
-              if (!verifySkillTriggered) {
-                this.showSkillBanner("検証🔍", "非開示解除 / デマ解消");
+              let revCount = this.revealBlackout();
+              let clnCount = this.cleanseFakeTiles(1);
+              if ((revCount > 0 || clnCount > 0) && !verifySkillTriggered) {
+                this.showSkillBanner("客観性の担保", "非開示解除 / デマ解消");
                 verifySkillTriggered = true;
               }
             }
           }
         });
       });
-
-      if (hasDialogueMatch) this.restoreBribedMember();
 
       this.state.oppressionHp = Math.max(0, this.state.oppressionHp - turnDamage);
       this.updateUI();
@@ -913,8 +982,8 @@ class Game {
         }
       }
       for (let i = 0; i < emptySlots; i++) {
-        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-        this.state.board[i][c] = { type: randomKey, blackout: false, yOffset: -emptySlots * CONFIG.TILE_SIZE, scale: 1 };
+        const randomKey = this.getRandomDropType();
+        this.state.board[i][c] = { type: randomKey, blackout: false, yOffset: -emptySlots * CONFIG.TILE_SIZE, scale: 1, propagandaTimer: 0 };
       }
     }
   }
@@ -956,6 +1025,19 @@ class Game {
     this.state.enemyCd--;
     this.state.elapsedTurns++;
 
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        let t = this.state.board[r][c];
+        if (t && t.propagandaTimer > 0) {
+          t.propagandaTimer--;
+          if (t.propagandaTimer === 0 && t.type === "FAKE") {
+            t.type = t.originalType || this.getRandomDropType();
+            delete t.originalType;
+          }
+        }
+      }
+    }
+
     if (this.state.remainingTurns <= 10 || this.state.oppressionHp < CONFIG.MAX_OPPRESSION * 0.2) {
       this.enemies.forEach(e => e.cdMax = 2);
     }
@@ -964,24 +1046,33 @@ class Game {
 
     const buffs = this.calculateBuffs();
 
-    // 弁護士スキル「違憲審査」（5ターンごと）
-    if (buffs.lawyerCount > 0 && this.state.elapsedTurns % 5 === 0) {
-      let dmg = 150 * buffs.lawyerCount;
-      this.state.oppressionHp = Math.max(0, this.state.oppressionHp - dmg);
-      this.convertFakeToVerify(buffs.lawyerCount * 2);
-      this.showSkillBanner("違憲審査", `抑圧度-${dmg} / デマを検証🔍に変換`);
+    if (buffs.lawyerCount > 0) {
+      let resolvedCount = this.resolveLawyerSkill(buffs.lawyerCount);
+      if (resolvedCount > 0) {
+        this.showSkillBanner("社会正義の実現", `非開示・デマを${resolvedCount}マス解除`);
+      }
     }
 
-    // 記者スキル「報道の自由」（5ターンごと）
-    if (buffs.reporterCount > 0 && this.state.elapsedTurns % 5 === 0) {
-      this.convertQuestionToAction(buffs.reporterCount * 2);
-      this.showSkillBanner("報道の自由", "「疑問💬」を「署名📜」「デモ🪧」へ変化");
+    if (buffs.reporterCount > 0 && this.state.elapsedTurns % 4 === 0) {
+      let changedCount = this.convertAllQuestionsToAction();
+      if (changedCount > 0) {
+        this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ変化");
+      }
+    }
+
+    if (buffs.bribedReporterCount > 0) {
+      let corruptedCount = this.corruptQuestions(buffs.bribedReporterCount);
+      if (corruptedCount > 0) {
+        this.showSkillBanner("情報操作(買収)", "「疑問💬」を「デマ」または「非開示」に悪化");
+      }
     }
 
     if (this.state.enemyCd <= 0) {
       const enemy = this.enemies[this.state.currentEnemyIdx];
-      this.showSkillBanner(enemy.skillName, enemy.desc);
-      enemy.action();
+      let hasEffect = enemy.action();
+      if (hasEffect) {
+        this.showSkillBanner(enemy.skillName, enemy.desc);
+      }
       this.setupEnemy(this.state.currentEnemyIdx);
     }
 
@@ -997,7 +1088,35 @@ class Game {
     }
   }
 
-  convertQuestionToAction(count) {
+  resolveLawyerSkill(count) {
+    let targets = [];
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        let t = this.state.board[r][c];
+        if (t.blackout) {
+          targets.push({ type: 'blackout', tile: t });
+        } else if (t.type === 'FAKE') {
+          targets.push({ type: 'fake', tile: t });
+        }
+      }
+    }
+    if (targets.length === 0) return 0;
+
+    targets.sort(() => Math.random() - 0.5);
+    let resolved = 0;
+    for (let i = 0; i < Math.min(count, targets.length); i++) {
+      let item = targets[i];
+      if (item.type === 'blackout') {
+        item.tile.blackout = false;
+      } else {
+        item.tile.type = this.getRandomDropType();
+      }
+      resolved++;
+    }
+    return resolved;
+  }
+
+  convertAllQuestionsToAction() {
     let questions = [];
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
@@ -1005,32 +1124,49 @@ class Game {
         if (t && t.type === "QUESTION" && !t.blackout) questions.push(t);
       }
     }
-    questions.sort(() => Math.random() - 0.5);
-    for (let i = 0; i < Math.min(count, questions.length); i++) {
-      questions[i].type = Math.random() < 0.5 ? "SIGN" : "DEMO";
-    }
+    if (questions.length === 0) return 0;
+
+    questions.forEach(t => {
+      t.type = Math.random() < 0.5 ? "SIGN" : "DEMO";
+    });
+    return questions.length;
   }
 
-  convertFakeToVerify(count) {
-    let fakes = [];
+  corruptQuestions(count) {
+    let questions = [];
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
         let t = this.state.board[r][c];
-        if (t && t.type === "FAKE" && !t.blackout) fakes.push(t);
+        if (t && t.type === "QUESTION" && !t.blackout) questions.push(t);
       }
     }
-    for (let i = 0; i < Math.min(count, fakes.length); i++) {
-      fakes[i].type = "VERIFY";
+    if (questions.length === 0) return 0;
+
+    questions.sort(() => Math.random() - 0.5);
+    let corrupted = 0;
+    for (let i = 0; i < Math.min(count, questions.length); i++) {
+      if (Math.random() < 0.5) {
+        questions[i].type = "FAKE";
+      } else {
+        questions[i].blackout = true;
+      }
+      corrupted++;
     }
+    return corrupted;
   }
 
   convertQuestionToFake() {
+    let changed = 0;
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
         let t = this.state.board[r][c];
-        if (t && t.type === "QUESTION" && !t.blackout) t.type = "FAKE";
+        if (t && t.type === "QUESTION" && !t.blackout) {
+          t.type = "FAKE";
+          changed++;
+        }
       }
     }
+    return changed;
   }
 
   cleanseFakeTiles(count) {
@@ -1041,35 +1177,34 @@ class Game {
         if (t && t.type === "FAKE" && !t.blackout) fakes.push(t);
       }
     }
+    let cleansed = 0;
     for (let i = 0; i < Math.min(count, fakes.length); i++) {
       fakes[i].type = "QUESTION";
+      cleansed++;
     }
+    return cleansed;
   }
 
-revealBlackout() {
-  let blackouts = [];
-  for (let r = 0; r < CONFIG.ROWS; r++) {
-    for (let c = 0; c < CONFIG.COLS; c++) {
-      if (this.state.board[r][c].blackout) blackouts.push(this.state.board[r][c]);
+  revealBlackout() {
+    let blackouts = [];
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        if (this.state.board[r][c].blackout) blackouts.push(this.state.board[r][c]);
+      }
     }
+    if (blackouts.length === 0) return 0;
+
+    const minCount = Math.min(2, blackouts.length);
+    const maxCount = blackouts.length;
+    const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
+
+    blackouts.sort(() => Math.random() - 0.5);
+
+    for (let i = 0; i < count; i++) {
+      blackouts[i].blackout = false;
+    }
+    return count;
   }
-  
-  // 非開示マスがなければ処理終了
-  if (blackouts.length === 0) return;
-
-  // 2 ～ 現在の非開示マス数 までのランダムな解除数を算出（非開示が1マスの場合は1マス解除）
-  const minCount = Math.min(2, blackouts.length);
-  const maxCount = blackouts.length;
-  const count = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
-
-  // ランダムな順序で解除するためにシャッフル
-  blackouts.sort(() => Math.random() - 0.5);
-
-  // 決定した数だけ解除
-  for (let i = 0; i < count; i++) {
-    blackouts[i].blackout = false;
-  }
-}
 
   applyBlackout(count) {
     let targets = [];
@@ -1078,10 +1213,36 @@ revealBlackout() {
         if (!this.state.board[r][c].blackout) targets.push(this.state.board[r][c]);
       }
     }
+    if (targets.length === 0) return 0;
+
     targets.sort(() => Math.random() - 0.5);
+    let applied = 0;
     for (let i = 0; i < Math.min(count, targets.length); i++) {
       targets[i].blackout = true;
+      applied++;
     }
+    return applied;
+  }
+
+  applyPropaganda() {
+    let maxR = CONFIG.ROWS - 3;
+    let maxC = CONFIG.COLS - 3;
+    let startR = Math.floor(Math.random() * (maxR + 1));
+    let startC = Math.floor(Math.random() * (maxC + 1));
+    
+    let changed = 0;
+    for (let r = startR; r < startR + 3; r++) {
+      for (let c = startC; c < startC + 3; c++) {
+        let t = this.state.board[r][c];
+        if (t && t.type !== "FAKE") {
+          t.originalType = t.type;
+          t.type = "FAKE";
+          t.propagandaTimer = 2;
+          changed++;
+        }
+      }
+    }
+    return changed;
   }
 
   damagePlayer(amount) {
@@ -1096,7 +1257,9 @@ revealBlackout() {
     if (unbribed.length > 0) {
       let targetIdx = unbribed[Math.floor(Math.random() * unbribed.length)];
       this.state.bribedMembers[targetIdx] = true;
+      return true;
     }
+    return false;
   }
 
   restoreBribedMember() {
@@ -1107,7 +1270,9 @@ revealBlackout() {
     if (bribed.length > 0) {
       let targetIdx = bribed[Math.floor(Math.random() * bribed.length)];
       this.state.bribedMembers[targetIdx] = false;
+      return true;
     }
+    return false;
   }
 
   shuffleBoard() {
@@ -1115,7 +1280,7 @@ revealBlackout() {
     while (!isValid) {
       for (let r = 0; r < CONFIG.ROWS; r++) {
         for (let c = 0; c < CONFIG.COLS; c++) {
-          const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+          const randomKey = this.getRandomDropType();
           this.state.board[r][c].type = randomKey;
         }
       }
@@ -1247,11 +1412,18 @@ revealBlackout() {
   renderBuffDetails() {
     const buffs = this.calculateBuffs();
     let descLines = [];
-    if (buffs.citizenCount > 0) descLines.push(`署名・デモ強化`);
-    if (buffs.lawyerCount > 0) descLines.push(`5T違憲審査`);
-    if (buffs.reporterCount > 0) descLines.push(`5T報道の自由`);
+    if (buffs.citizenCount === 5) {
+      descLines.push(`市民連帯崩壊(過密弱体化)`);
+    } else if (buffs.citizenCount > 0) {
+      descLines.push(`署名・デモ強化`);
+    }
+    if (buffs.lawyerCount > 0) descLines.push(`毎T非開示/デマ解除`);
+    if (buffs.reporterCount > 0) descLines.push(`4T報道の自由`);
     if (buffs.expertCount > 0) descLines.push(`検証強化/コンボ+`);
-    if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
+    if (buffs.healMult !== 1.0) {
+      let percent = Math.round((buffs.healMult - 1) * 100);
+      descLines.push(`回復${percent >= 0 ? '+' : ''}${percent}%`);
+    }
 
     document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
   }
