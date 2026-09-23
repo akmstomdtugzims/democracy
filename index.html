@@ -270,7 +270,6 @@
       max-width: 240px;
     }
 
-    /* SNSシェアアイコン行 */
     .share-btn-row {
       display: flex;
       justify-content: center;
@@ -441,7 +440,6 @@
     <div class="btn-group">
       <button class="btn" id="btn-result-restart">あきらめない</button>
       
-      <!-- SNSシェア用アイコンボタン列 -->
       <div class="share-btn-row">
         <button class="btn-share-icon btn-share-x" id="btn-share-x" title="𝕏 でシェア">𝕏</button>
         <button class="btn-share-icon btn-share-other" id="btn-share-other" title="その他の方法でシェア">🔗</button>
@@ -466,7 +464,7 @@
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
         <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ解消</td></tr>
-        <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
+        <tr><td>署名</td><td>📜</td><td>20 pt (市民数で強化)</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt (市民数で強化)</td></tr>
         <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
       </tbody>
@@ -493,7 +491,7 @@ const CONFIG = {
 
 const DROPS = {
   QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
-  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "デマ", power: 0, penaltyDamage: 3 },
+  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "デマ", power: 0, penaltyDamage: 5 },
   VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
   SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 20 },
   DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 20 },
@@ -503,11 +501,11 @@ const DROPS = {
 const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
 const JOBS = [
-  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 「デモ🪧」威力アップ＆全体効果強化" },
-  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法の支配: 3Tごとに非開示解除・デマ浄化・デマ無効バリア獲得" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 「検証🔍」効果強化（複数被りで効果減衰）" },
+  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 「署名📜」「デモ🪧」威力アップ" },
+  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "違憲審査: 5Tごとに高威力の抑圧削り＆「デマ」を「検証🔍」に変換" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 5Tごとに「疑問💬」を「署名📜」「デモ🪧」に変換" },
   { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量アップ" },
-  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: 「検証🔍」性能向上＆コンボボーナス" }
+  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: 「検証🔍」の威力強化＆コンボボーナス" }
 ];
 
 class Game {
@@ -528,7 +526,6 @@ class Game {
       party: [],
       partyIconIndices: [],
       bribedMembers: [false, false, false, false, false],
-      lawyerShields: 0, // 弁護士スキルによるデマ防止バリア
       selectedSlot: 0,
       popups: [],
       dragState: {
@@ -547,32 +544,33 @@ class Game {
     this.resetGame();
   }
 
+  // 元の敵名称・スキル名に戻した初期化処理
   initEnemies() {
     return [
       { 
-        name: "世論誘導広報室", 
-        skillName: "プロパガンダ", 
+        name: "世論工作", 
+        skillName: "デマ拡散", 
         cdMax: 3,
         desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
         action: () => { this.damagePlayer(25); this.convertQuestionToFake(); } 
       },
       { 
-        name: "買収された報道", 
-        skillName: "スピン報道", 
+        name: "不透明な政治決定", 
+        skillName: "ブラックボックス化", 
         cdMax: 3,
         desc: "25ダメージ＋盤面シャッフル＆2マス非開示化", 
         action: () => { this.damagePlayer(25); this.shuffleBoard(); this.applyBlackout(2); } 
       },
       { 
-        name: "悪徳政治家", 
-        skillName: "お答えを差し控えさせていただきます", 
+        name: "強権的な態度", 
+        skillName: "情報遮断", 
         cdMax: 3,
         desc: "25ダメージ＋既存の4マスを非開示マスに変更", 
         action: () => { this.damagePlayer(25); this.applyBlackout(4); } 
       },
       { 
-        name: "懐柔工作室", 
-        skillName: "買収", 
+        name: "利権構造", 
+        skillName: "買収工作", 
         cdMax: 3,
         desc: "25ダメージ＋パーティ2名を買収(無効化)", 
         action: () => { this.damagePlayer(25); this.bribeMember(); this.bribeMember(); } 
@@ -682,7 +680,6 @@ class Game {
       baseDecayRate: 4,
       elapsedTurns: 0,
       bribedMembers: [false, false, false, false, false],
-      lawyerShields: 0,
       popups: []
     });
 
@@ -712,37 +709,26 @@ class Game {
       lawyerCount: 0, 
       citizenCount: 0,
       expertCount: 0,
-      demoMult: 1.0 
+      demoMult: 1.0,
+      signMult: 1.0
     };
-
-    let counts = {};
 
     this.state.party.forEach((id, idx) => {
       if (this.state.bribedMembers[idx]) return;
-      counts[id] = (counts[id] || 0) + 1;
 
       if (id === "lawyer") buffs.lawyerCount++;
       if (id === "reporter") buffs.reporterCount++;
       if (id === "politician") buffs.healMult += 0.40;
       if (id === "expert") {
         buffs.expertCount++;
+        buffs.verifyMult += 0.30;
         buffs.comboBonus += 0.15;
       }
       if (id === "citizen") buffs.citizenCount++;
     });
 
-    if (buffs.reporterCount > 0) {
-      let add = 0;
-      for (let i = 1; i <= buffs.reporterCount; i++) {
-        if (i === 1) add += 0.50;
-        else if (i === 2) add += 0.25;
-        else add += 0.10;
-      }
-      buffs.verifyMult = 1.0 + add;
-    }
-
     buffs.demoMult = 1.0 + (buffs.citizenCount * 0.30);
-    buffs.citizenMult = 1.0 + (Math.min(buffs.citizenCount, 3) * 0.10);
+    buffs.signMult = 1.0 + (buffs.citizenCount * 0.25);
 
     return buffs;
   }
@@ -815,21 +801,22 @@ class Game {
             this.damagePlayer(DROPS.FAKE.penaltyDamage);
           } else if (DROPS[t.type]) {
             let basePower = DROPS[t.type].power;
-            let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
-            if (t.type === "DEMO") specMult *= buffs.demoMult;
+            let specMult = 1.0;
+            if (t.type === "VERIFY") specMult = buffs.verifyMult;
+            if (t.type === "DEMO") specMult = buffs.demoMult;
+            if (t.type === "SIGN") specMult = buffs.signMult;
 
             let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
             
-            let finalPower = Math.floor(basePower * specMult * comboMult * matchCountMult * buffs.citizenMult);
+            let finalPower = Math.floor(basePower * specMult * comboMult * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
 
             if (t.type === "VERIFY") {
-              let revealCount = 1 + Math.min(buffs.reporterCount, 2);
-              this.revealBlackout(revealCount);
-              this.cleanseFakeTiles(2);
+              this.revealBlackout(1);
+              this.cleanseFakeTiles(1);
               if (!verifySkillTriggered) {
-                this.showSkillBanner("検証🔍", `非開示${revealCount}マス解除 / デマ解消`);
+                this.showSkillBanner("検証🔍", "非開示解除 / デマ解消");
                 verifySkillTriggered = true;
               }
             }
@@ -975,14 +962,20 @@ class Game {
 
     this.damagePlayer(this.state.baseDecayRate);
 
-    // 弁護士スキル（法の支配）処理
     const buffs = this.calculateBuffs();
-    if (buffs.lawyerCount > 0 && this.state.elapsedTurns % 3 === 0) {
-      let count = 2 * buffs.lawyerCount;
-      this.revealBlackout(count);
-      this.cleanseFakeTiles(2 * buffs.lawyerCount);
-      this.state.lawyerShields += buffs.lawyerCount; // デマ攻撃無効バリアを追加
-      this.showSkillBanner("法の支配", `非開示${count}マス解除 / デマ浄化 / デマブロック獲得`);
+
+    // 弁護士スキル「違憲審査」（5ターンごと）
+    if (buffs.lawyerCount > 0 && this.state.elapsedTurns % 5 === 0) {
+      let dmg = 150 * buffs.lawyerCount;
+      this.state.oppressionHp = Math.max(0, this.state.oppressionHp - dmg);
+      this.convertFakeToVerify(buffs.lawyerCount * 2);
+      this.showSkillBanner("違憲審査", `抑圧度-${dmg} / デマを検証🔍に変換`);
+    }
+
+    // 記者スキル「報道の自由」（5ターンごと）
+    if (buffs.reporterCount > 0 && this.state.elapsedTurns % 5 === 0) {
+      this.convertQuestionToAction(buffs.reporterCount * 2);
+      this.showSkillBanner("報道の自由", "「疑問💬」を「署名📜」「デモ🪧」へ変化");
     }
 
     if (this.state.enemyCd <= 0) {
@@ -1004,13 +997,34 @@ class Game {
     }
   }
 
-  convertQuestionToFake() {
-    // 弁護士バリアがある場合はデマ化を無効化
-    if (this.state.lawyerShields > 0) {
-      this.state.lawyerShields--;
-      this.showSkillBanner("法的防壁", "「法の支配」によりデマ化をブロック！");
-      return;
+  convertQuestionToAction(count) {
+    let questions = [];
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        let t = this.state.board[r][c];
+        if (t && t.type === "QUESTION" && !t.blackout) questions.push(t);
+      }
     }
+    questions.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < Math.min(count, questions.length); i++) {
+      questions[i].type = Math.random() < 0.5 ? "SIGN" : "DEMO";
+    }
+  }
+
+  convertFakeToVerify(count) {
+    let fakes = [];
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        let t = this.state.board[r][c];
+        if (t && t.type === "FAKE" && !t.blackout) fakes.push(t);
+      }
+    }
+    for (let i = 0; i < Math.min(count, fakes.length); i++) {
+      fakes[i].type = "VERIFY";
+    }
+  }
+
+  convertQuestionToFake() {
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
         let t = this.state.board[r][c];
@@ -1220,10 +1234,10 @@ class Game {
   renderBuffDetails() {
     const buffs = this.calculateBuffs();
     let descLines = [];
-    if (buffs.citizenCount > 0) descLines.push(`デモ威力x${buffs.demoMult.toFixed(1)}`);
-    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解除${2*buffs.lawyerCount}+浄化/防壁`);
-    if (buffs.reporterCount > 0) descLines.push(`検証x${buffs.verifyMult.toFixed(1)}`);
-    if (buffs.expertCount > 0) descLines.push(`コンボ強化`);
+    if (buffs.citizenCount > 0) descLines.push(`署名・デモ強化`);
+    if (buffs.lawyerCount > 0) descLines.push(`5T違憲審査`);
+    if (buffs.reporterCount > 0) descLines.push(`5T報道の自由`);
+    if (buffs.expertCount > 0) descLines.push(`検証強化/コンボ+`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
     document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
@@ -1270,7 +1284,6 @@ class Game {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        // ユーザーキャンセル時
       }
     } else {
       try {
