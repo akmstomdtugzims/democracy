@@ -60,49 +60,33 @@
       touch-action: none;
     }
 
-    #flash-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 50;
-    }
-
-    @keyframes damage-flash {
-      0% { background-color: rgba(217, 4, 41, 0.4); }
-      100% { background-color: transparent; }
-    }
-
-    .flash-effect {
-      animation: damage-flash 0.5s ease-out;
-    }
-
+    /* 敵スキルバナー（黒背景・シンプル） */
     #skill-banner {
       position: absolute;
       top: 35%;
       left: 0;
       width: 100%;
-      background: rgba(217, 4, 41, 0.95);
-      color: #fff;
+      background: #000000;
+      color: #ffffff;
       text-align: center;
-      padding: 10px 12px;
+      padding: 12px 16px;
       font-weight: bold;
       font-size: 0.95rem;
       z-index: 60;
       display: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
       pointer-events: none;
       line-height: 1.4;
+      border-top: 1px solid #333;
+      border-bottom: 1px solid #333;
     }
 
     #skill-banner .skill-effect-text {
       font-size: 0.8rem;
-      color: #ffcccc;
+      color: #cccccc;
       font-weight: normal;
       display: block;
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     .header-bar {
@@ -337,7 +321,6 @@
 <body>
 
 <div id="game-container">
-  <div id="flash-layer"></div>
   <div id="skill-banner"></div>
 
   <!-- Header -->
@@ -356,7 +339,7 @@
       <span>score: <strong id="score-display">0</strong> pt</span>
     </div>
     
-    <!-- 敵個別ゲージを排出し、抑圧度ゲージを常時表示 -->
+    <!-- 抑圧度ゲージ（常時表示） -->
     <div class="enemy-box">
       <div class="info-row">
         <span class="enemy-status-text" id="enemy-turn-info">世論誘導広報室のプロパガンダまであと 3 ターン</span>
@@ -440,9 +423,9 @@
   const DROP_KEYS = Object.keys(DROPS);
 
   const JOBS = [
-    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 全計算の最後に抑圧削減量を +15% 強化" },
+    { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 全計算の最後に抑圧への効果を +15% 強化" },
     { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解明" },
-    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の抑圧削減量 2.0 倍" },
+    { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」の効果 2.0 倍" },
     { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話💖」による気力回復量 +50%" },
     { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
   ];
@@ -471,8 +454,8 @@
       action: () => { damagePlayer(20); applyBlackout(3); } 
     },
     { 
-      name: "買収推進室", 
-      skillName: "マネーロンダリング買収", 
+      name: "懐柔工作室", 
+      skillName: "買収", 
       cdMax: 3,
       desc: "20ダメージ＋パーティ1名を買収(無効化)", 
       action: () => { damagePlayer(20); bribeMember(); } 
@@ -663,7 +646,6 @@
       let matchTypes = [...new Set(matches.map(m => gameState.board[m.r][m.c].type))];
       let lastName = DROPS[matchTypes[0]] ? DROPS[matchTypes[0]].name : "消去";
 
-      // 文字表示タイマーを設定（15フレーム=約0.5秒で消滅）
       gameState.popups = [{
         x: avgX, y: avgY - 10,
         text1: lastName,
@@ -676,7 +658,7 @@
         if (t.type === "DIALOGUE") {
           let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
           gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
-          restoreBribedMember(); // 対話で買収状態を1名回復
+          restoreBribedMember();
         } else if (DROPS[t.type]) {
           let basePower = DROPS[t.type].power;
           let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
@@ -797,10 +779,8 @@
     if (gameState.enemyCd <= 0) {
       const enemy = ENEMIES[gameState.currentEnemyIdx];
       showSkillBanner(enemy.name, enemy.skillName, enemy.desc);
-      triggerDamageAction();
       enemy.action();
 
-      // 敵を順繰りに入れ替える
       const nextEnemyIdx = (gameState.currentEnemyIdx + 1) % ENEMIES.length;
       setupEnemy(nextEnemyIdx);
     }
@@ -1001,7 +981,7 @@
   function renderBuffDetails() {
     const buffs = calculateBuffs();
     let descLines = [];
-    if (buffs.citizenMult > 1) descLines.push(`削減量+${Math.round((buffs.citizenMult-1)*100)}%`);
+    if (buffs.citizenMult > 1) descLines.push(`連帯+${Math.round((buffs.citizenMult-1)*100)}%`);
     if (buffs.lawyerCount > 0) descLines.push(`3Tごと解明${2*buffs.lawyerCount}マス`);
     if (buffs.verifyMult > 1) descLines.push(`検証2倍`);
     if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
@@ -1015,13 +995,6 @@
     banner.innerHTML = `${enemyName} : 【${skillName}】<span class="skill-effect-text">効果: ${effectDesc}</span>`;
     banner.style.display = "block";
     setTimeout(() => { banner.style.display = "none"; }, 2000);
-  }
-
-  function triggerDamageAction() {
-    const layer = document.getElementById("flash-layer");
-    layer.classList.remove("flash-effect");
-    void layer.offsetWidth;
-    layer.classList.add("flash-effect");
   }
 
   function openPartyModal() {
@@ -1081,15 +1054,17 @@
     const modal = document.getElementById("result-modal");
     const title = document.getElementById("modal-title");
     const body = document.getElementById("modal-body");
+    const restartBtn = document.getElementById("btn-result-restart");
 
     if (isClear) {
-      title.innerText = "抑圧の解体・勝利";
+      title.innerText = "抑圧の解体";
       title.style.color = "#2b9348";
       body.innerHTML = `
         最終 score: <strong>${gameState.score}</strong> pt<br>
         結末: ${reasonText}<br><br>
-        抑圧構造と無関心を完全に打破し、暮らしと個人の尊厳を守り抜くことに成功しました。
+        抑圧構造と無関心を打破し、暮らしと個人の尊厳を守り抜くことに成功しました。
       `;
+      restartBtn.innerText = "もう一度プレイ";
     } else {
       title.innerText = "気力喪失・抑圧維持";
       title.style.color = "var(--accent-red)";
@@ -1098,6 +1073,7 @@
         結末: ${reasonText}<br><br>
         生活を圧迫する決定や理不尽の連続により気力が尽き、体制の抑圧がそのまま固定化されました。
       `;
+      restartBtn.innerText = "声をあげ続ける";
     }
     modal.style.display = "flex";
   }
