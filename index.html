@@ -276,6 +276,11 @@
       gap: 6px;
     }
 
+    .btn-share-other {
+      background: #4a5568;
+      color: #ffffff;
+    }
+
     .select-grid {
       display: flex;
       gap: 4px;
@@ -364,7 +369,7 @@
   <div id="skill-banner"></div>
 
   <header class="header-bar">
-    <span class="game-title">Democracy Puzzle</span>
+    <span class="game-title">Democracy Match</span>
     <div class="header-btns">
       <button id="btn-party-open">パーティ選択</button>
       <button id="btn-reset">リセット</button>
@@ -412,6 +417,7 @@
     <div class="btn-group">
       <button class="btn" id="btn-result-restart">あきらめない</button>
       <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
+      <button class="btn btn-share btn-share-other" id="btn-share-other">その他の方法で共有</button>
     </div>
   </div>
 
@@ -430,10 +436,10 @@
         <tr><th>種類</th><th>アイコン</th><th>効果</th></tr>
       </thead>
       <tbody>
-        <tr><td>疑問</td><td>💭</td><td>10 pt</td></tr>
+        <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
         <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ解消</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
-        <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>20 pt (市民数で強化)</td></tr>
         <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
       </tbody>
     </table>
@@ -444,10 +450,9 @@
 
 <script>
 /**
- * Democracy Puzzle - Application Logic
+ * Democracy Match - Application Logic
  */
 
-// --- 定数定義 ---
 const CONFIG = {
   COLS: 6,
   ROWS: 5,
@@ -455,11 +460,11 @@ const CONFIG = {
   MAX_TURNS: 20,
   MAX_OPPRESSION: 3000,
   MAX_PLAYER_HP: 100,
-  CITIZEN_CAP: 3
+  CITIZEN_CAP: 5
 };
 
 const DROPS = {
-  QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💭", name: "疑問", power: 10 },
+  QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
   FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "デマ", power: 0, penaltyDamage: 3 },
   VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
   SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 20 },
@@ -470,14 +475,13 @@ const DROPS = {
 const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
 const JOBS = [
-  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: すべての効果を +15% 強化" },
-  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解除" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」効果1.8倍 & 検証時の非開示解除数+1" },
-  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量 +50%" },
-  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
+  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 「デモ🪧」威力アップ＆全体効果強化" },
+  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を自動解除" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」効果強化（複数被りで効果減衰）" },
+  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量アップ" },
+  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: 「検証🔍」性能向上＆コンボボーナス" }
 ];
 
-// --- ゲームエンジン / コントローラー ---
 class Game {
   constructor() {
     this.canvas = document.getElementById("puzzleCanvas");
@@ -520,7 +524,7 @@ class Game {
         name: "世論誘導広報室", 
         skillName: "プロパガンダ", 
         cdMax: 3,
-        desc: "25ダメージ＋すべての「疑問💭」を「デマ」に変更", 
+        desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
         action: () => { this.damagePlayer(25); this.convertQuestionToFake(); } 
       },
       { 
@@ -548,7 +552,6 @@ class Game {
   }
 
   bindEvents() {
-    // パズル操作のイベントリスナー
     const getPos = (e) => {
       const rect = this.canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -598,7 +601,6 @@ class Game {
         return;
       }
 
-      // ドロップの入れ替え
       let temp = this.state.board[start.r][start.c];
       this.state.board[start.r][start.c] = this.state.board[target.r][target.c];
       this.state.board[target.r][target.c] = temp;
@@ -611,17 +613,14 @@ class Game {
       }
     };
 
-    // マウスイベント
     this.canvas.addEventListener("mousedown", (e) => handleStart(getPos(e)));
     this.canvas.addEventListener("mousemove", (e) => handleMove(getPos(e)));
     this.canvas.addEventListener("mouseup", handleEnd);
 
-    // タッチイベント
     this.canvas.addEventListener("touchstart", (e) => handleStart(getPos(e.touches[0])), { passive: true });
     this.canvas.addEventListener("touchmove", (e) => handleMove(getPos(e.touches[0])), { passive: true });
     this.canvas.addEventListener("touchend", handleEnd);
 
-    // UIボタンイベント
     document.getElementById("btn-party-open").onclick = () => this.openPartyModal();
     document.getElementById("btn-party-close").onclick = () => this.closePartyModal();
     document.getElementById("btn-party-random").onclick = () => {
@@ -631,6 +630,7 @@ class Game {
     document.getElementById("btn-reset").onclick = () => this.resetGame();
     document.getElementById("btn-result-restart").onclick = () => this.resetGame();
     document.getElementById("btn-share-x").onclick = () => this.shareToX();
+    document.getElementById("btn-share-other").onclick = () => this.shareOther();
   }
 
   randomizeParty() {
@@ -674,23 +674,47 @@ class Game {
   }
 
   calculateBuffs() {
-    let buffs = { verifyMult: 1.0, reporterCount: 0, comboBonus: 0.0, healMult: 1.0, lawyerCount: 0, citizenCount: 0 };
+    let buffs = { 
+      verifyMult: 1.0, 
+      reporterCount: 0, 
+      comboBonus: 0.0, 
+      healMult: 1.0, 
+      lawyerCount: 0, 
+      citizenCount: 0,
+      expertCount: 0,
+      demoMult: 1.0 
+    };
+
+    let counts = {};
 
     this.state.party.forEach((id, idx) => {
       if (this.state.bribedMembers[idx]) return;
+      counts[id] = (counts[id] || 0) + 1;
 
       if (id === "lawyer") buffs.lawyerCount++;
-      if (id === "reporter") {
-        buffs.verifyMult *= 1.8;
-        buffs.reporterCount++;
+      if (id === "reporter") buffs.reporterCount++;
+      if (id === "politician") buffs.healMult += 0.40;
+      if (id === "expert") {
+        buffs.expertCount++;
+        buffs.comboBonus += 0.15;
       }
-      if (id === "politician") buffs.healMult += 0.50;
-      if (id === "expert") buffs.comboBonus += 0.15;
       if (id === "citizen") buffs.citizenCount++;
     });
 
-    const effectiveCitizenCount = Math.min(buffs.citizenCount, CONFIG.CITIZEN_CAP);
-    buffs.citizenMult = 1.0 + (effectiveCitizenCount * 0.15);
+    // 記者の重複減衰計算 (1体目: +50%, 2体目: +25%, 3体目以降: +10%)
+    if (buffs.reporterCount > 0) {
+      let add = 0;
+      for (let i = 1; i <= buffs.reporterCount; i++) {
+        if (i === 1) add += 0.50;
+        else if (i === 2) add += 0.25;
+        else add += 0.10;
+      }
+      buffs.verifyMult = 1.0 + add;
+    }
+
+    // 市民によるデモ強化
+    buffs.demoMult = 1.0 + (buffs.citizenCount * 0.30);
+    buffs.citizenMult = 1.0 + (Math.min(buffs.citizenCount, 3) * 0.10);
 
     return buffs;
   }
@@ -737,7 +761,7 @@ class Game {
         x: avgX, y: avgY - 10,
         text1: lastName,
         text2: `${comboCount} combo`,
-        timer: 15
+        timer: 12
       }];
 
       let hasDialogueMatch = false;
@@ -756,7 +780,7 @@ class Game {
             hasDialogueMatch = true;
             this.cleanseFakeTiles(2);
             if (!dialogueSkillTriggered) {
-              this.showSkillBanner("あなた", "対話🤝", "気力回復 / 買収解除 / デマ解消");
+              this.showSkillBanner("対話🤝", "気力回復 / 買収解除 / デマ解消");
               dialogueSkillTriggered = true;
             }
           } else if (t.type === "FAKE") {
@@ -764,6 +788,8 @@ class Game {
           } else if (DROPS[t.type]) {
             let basePower = DROPS[t.type].power;
             let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
+            if (t.type === "DEMO") specMult *= buffs.demoMult;
+
             let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
             
             let finalPower = Math.floor(basePower * specMult * comboMult * matchCountMult * buffs.citizenMult);
@@ -771,11 +797,11 @@ class Game {
             this.state.score += finalPower;
 
             if (t.type === "VERIFY") {
-              let revealCount = 1 + buffs.reporterCount;
+              let revealCount = 1 + Math.min(buffs.reporterCount, 2);
               this.revealBlackout(revealCount);
               this.cleanseFakeTiles(2);
               if (!verifySkillTriggered) {
-                this.showSkillBanner("あなた", "検証🔍", `非開示${revealCount}マス解除 / デマ解消`);
+                this.showSkillBanner("検証🔍", `非開示${revealCount}マス解除 / デマ解消`);
                 verifySkillTriggered = true;
               }
             }
@@ -788,9 +814,9 @@ class Game {
       this.state.oppressionHp = Math.max(0, this.state.oppressionHp - turnDamage);
       this.updateUI();
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         this.render();
-        await this.sleep(30);
+        await this.sleep(25);
       }
 
       this.applyGravity(uniqueMatches);
@@ -814,7 +840,6 @@ class Game {
 
   findMatchGroups() {
     let groups = [];
-    // 横方向の判定
     for (let r = 0; r < CONFIG.ROWS; r++) {
       let c = 0;
       while (c < CONFIG.COLS) {
@@ -835,7 +860,6 @@ class Game {
         c += Math.max(1, matchLen);
       }
     }
-    // 縦方向の判定
     for (let c = 0; c < CONFIG.COLS; c++) {
       let r = 0;
       while (r < CONFIG.ROWS) {
@@ -917,7 +941,6 @@ class Game {
     this.state.enemyCd--;
     this.state.elapsedTurns++;
 
-    // ピンチ時の敵攻撃スパン短縮
     if (this.state.remainingTurns <= 10 || this.state.oppressionHp < CONFIG.MAX_OPPRESSION * 0.2) {
       this.enemies.forEach(e => e.cdMax = 2);
     }
@@ -928,12 +951,12 @@ class Game {
     if (buffs.lawyerCount > 0 && this.state.elapsedTurns % 3 === 0) {
       let count = 2 * buffs.lawyerCount;
       this.revealBlackout(count);
-      this.showSkillBanner("弁護士", "法的手段", `非開示マスを ${count} つ自動解除`);
+      this.showSkillBanner("法的手段", `非開示マスを ${count} つ自動解除`);
     }
 
     if (this.state.enemyCd <= 0) {
       const enemy = this.enemies[this.state.currentEnemyIdx];
-      this.showSkillBanner(enemy.name, enemy.skillName, enemy.desc);
+      this.showSkillBanner(enemy.skillName, enemy.desc);
       enemy.action();
       this.setupEnemy(this.state.currentEnemyIdx);
     }
@@ -941,7 +964,6 @@ class Game {
     this.updateUI();
     this.render();
 
-    // 勝敗判定
     if (this.state.oppressionHp <= 0) {
       this.showResultModal(true, "【透明性の確保】<br>抑圧を打ち破り、健全な議論の場が取り戻されました。さあ、次は画面の外で。");
     } else if (this.state.playerHp <= 0) {
@@ -951,7 +973,6 @@ class Game {
     }
   }
 
-  // --- 状態操作のヘルパー群 ---
   convertQuestionToFake() {
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
@@ -1038,7 +1059,6 @@ class Game {
     }
   }
 
-  // --- 描画処理 ---
   render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const { isDragging, startTile, dragPos } = this.state.dragState;
@@ -1107,10 +1127,15 @@ class Game {
     for (let i = this.state.popups.length - 1; i >= 0; i--) {
       let p = this.state.popups[i];
       p.timer--;
-      p.y -= 0.5;
+      p.y -= 0.8;
+
+      if (p.timer <= 0) {
+        this.state.popups.splice(i, 1);
+        continue;
+      }
 
       this.ctx.save();
-      this.ctx.globalAlpha = Math.max(0, p.timer / 15);
+      this.ctx.globalAlpha = Math.max(0, p.timer / 12);
       
       this.ctx.font = "bold 14px sans-serif";
       this.ctx.fillStyle = "#d90429";
@@ -1122,12 +1147,9 @@ class Game {
       this.ctx.fillText(p.text2, p.x, p.y + 14);
 
       this.ctx.restore();
-
-      if (p.timer <= 0) this.state.popups.splice(i, 1);
     }
   }
 
-  // --- UI表示の更新 ---
   updateUI() {
     document.getElementById("rem-turns").innerText = this.state.remainingTurns;
     document.getElementById("score-display").innerText = this.state.score;
@@ -1161,20 +1183,20 @@ class Game {
   renderBuffDetails() {
     const buffs = this.calculateBuffs();
     let descLines = [];
-    if (buffs.citizenMult > 1) descLines.push(`連帯+${Math.round((buffs.citizenMult-1)*100)}%`);
-    if (buffs.lawyerCount > 0) descLines.push(`3Tごとに非開示解除${2*buffs.lawyerCount}マス`);
-    if (buffs.reporterCount > 0) descLines.push(`検証1.8倍/解除+${buffs.reporterCount}`);
-    if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
+    if (buffs.citizenCount > 0) descLines.push(`デモ威力x${buffs.demoMult.toFixed(1)}`);
+    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解除${2*buffs.lawyerCount}`);
+    if (buffs.reporterCount > 0) descLines.push(`検証x${buffs.verifyMult.toFixed(1)}`);
+    if (buffs.expertCount > 0) descLines.push(`コンボ強化`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
     document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
   }
 
-  showSkillBanner(userName, skillName, desc) {
+  showSkillBanner(skillName, desc) {
     const banner = document.getElementById("skill-banner");
-    banner.innerHTML = `${userName}のスキル発動<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
+    banner.innerHTML = `スキル発動<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
     banner.style.display = "block";
-    setTimeout(() => { banner.style.display = "none"; }, 2500);
+    setTimeout(() => { banner.style.display = "none"; }, 1200);
   }
 
   showResultModal(isWin, message) {
@@ -1186,17 +1208,43 @@ class Game {
     document.getElementById("result-modal").style.display = "flex";
   }
 
-  shareToX() {
+  getShareText() {
     const { isWin, score, remTurns } = this.state.lastResult;
     const statusText = isWin ? "【クリア】健全な議論の場が取り戻されました" : "【ゲームオーバー】社会の無関心に呑み込まれました…";
+    return `【Democracy Match】\n${statusText}\nスコア: ${score} pt / 残りターン: ${remTurns}\n`;
+  }
+
+  shareToX() {
     const gameUrl = "https://akmstomdtugzims.github.io/democracy/";
-    
-    const text = `【Democracy Puzzle】\n${statusText}\nスコア: ${score} pt / 残りターン: ${remTurns}\n`;
+    const text = this.getShareText();
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(gameUrl)}`;
     window.open(tweetUrl, "_blank");
   }
 
-  // --- モーダルダイアログ制御 ---
+  async shareOther() {
+    const gameUrl = "https://akmstomdtugzims.github.io/democracy/";
+    const shareData = {
+      title: "Democracy Match",
+      text: this.getShareText(),
+      url: gameUrl
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // キャンセル時は何もしない
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareData.text}${gameUrl}`);
+        alert("結果のテキストとリンクをクリップボードにコピーしました！");
+      } catch (err) {
+        alert("共有に対応していません。");
+      }
+    }
+  }
+
   openPartyModal() {
     this.state.selectedSlot = 0;
     this.renderPartyModalSlots();
@@ -1265,7 +1313,6 @@ class Game {
   }
 }
 
-// アプリケーション起動
 window.addEventListener("DOMContentLoaded", () => {
   new Game();
 });
