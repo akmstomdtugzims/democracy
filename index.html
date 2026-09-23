@@ -756,7 +756,7 @@ class Game {
             hasDialogueMatch = true;
             this.cleanseFakeTiles(2);
             if (!dialogueSkillTriggered) {
-              this.showSkillBanner("あなた", "対話🤝", "気力回復 / 買収解除 / デマ2マス解消");
+              this.showSkillBanner("あなた", "対話🤝", "気力回復 / 買収解除 / デマ解消");
               dialogueSkillTriggered = true;
             }
           } else if (t.type === "FAKE") {
@@ -775,7 +775,7 @@ class Game {
               this.revealBlackout(revealCount);
               this.cleanseFakeTiles(2);
               if (!verifySkillTriggered) {
-                this.showSkillBanner("あなた", "検証🔍", `非開示${revealCount}マス解除 / デマ2マス解消`);
+                this.showSkillBanner("あなた", "検証🔍", `非開示${revealCount}マス解除 / デマ解消`);
                 verifySkillTriggered = true;
               }
             }
@@ -943,7 +943,7 @@ class Game {
 
     // 勝敗判定
     if (this.state.oppressionHp <= 0) {
-      this.showResultModal(true, "【透明性の確保】<br>構造的抑圧を打ち破り、健全な議論の場が取り戻されました。さあ、次は画面の外で。");
+      this.showResultModal(true, "【透明性の確保】<br>抑圧を打ち破り、健全な議論の場が取り戻されました。さあ、次は画面の外で。");
     } else if (this.state.playerHp <= 0) {
       this.showResultModal(false, "【あきらめの連鎖】<br>市民の気力が尽き、社会への無関心が定着してしまいました。");
     } else if (this.state.remainingTurns <= 0) {
