@@ -46,8 +46,8 @@
       max-height: 900px;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start; /* 上から順に表示するため変更 */
-      gap: 8px; /* 要素間の隙間を指定 */
+      justify-content: flex-start;
+      gap: 8px;
       padding: 10px;
       position: relative;
     }
@@ -398,7 +398,7 @@
 
     <!-- 敵の行動ターン表示 -->
     <div class="info-row" style="margin-bottom: 6px;">
-      <span class="enemy-status-text" id="enemy-turn-info">3ターン後 世論誘導広報室【<strong>プロパガンダ</strong>】<br><span style="font-size:0.7rem; color:#666;">（25ダメージ＋抑圧度回復+100）</span></span>
+      <span class="enemy-status-text" id="enemy-turn-info">3ターン後 世論誘導広報室【<strong>プロパガンダ</strong>】<br><span style="font-size:0.7rem; color:#666;">（25ダメージ＋すべての「疑問」を「デマ」に変更）</span></span>
     </div>
 
     <!-- 気力 -->
@@ -436,7 +436,6 @@
     <p style="font-size:0.7rem; color:#666; text-align:center; margin-bottom:8px;">枠を選択してからメンバーを指定（重複可能）</p>
     <div class="select-grid" id="modal-slots"></div>
     
-    <!-- ランダムボタンを追加 -->
     <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem;">メンバーをランダム設定</button>
 
     <div class="job-list" id="modal-job-list"></div>
@@ -448,10 +447,10 @@
       </thead>
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示マスを解除</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ浄化</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
-        <tr><td>対話</td><td>💖</td><td>気力回復 + 買収1名解除（1マッチにつき1人）</td></tr>
+        <tr><td>対話</td><td>💖</td><td>気力回復 + 買収解除 + デマ浄化</td></tr>
       </tbody>
     </table>
 
@@ -466,16 +465,18 @@
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
   const TOTAL_OPPRESSION_MAX = 2500;
-  const CITIZEN_CAP = 3; // 市民バフの上限カウント数
+  const CITIZEN_CAP = 3;
 
+  /* デマ（FAKE）から絵文字（symbol）を削除 */
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
+    FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "", name: "デマ", power: 0, penaltyDamage: 3 },
     VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
     SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 20 },
     DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 20 },
     DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "💖", name: "対話", heal: 12 }
   };
-  const DROP_KEYS = Object.keys(DROPS);
+  const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
   const JOBS = [
     { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: すべての効果を +15% 強化" },
@@ -491,8 +492,8 @@
       name: "世論誘導広報室", 
       skillName: "プロパガンダ", 
       cdMax: 3,
-      desc: "25ダメージ＋抑圧度回復(+100)", 
-      action: () => { damagePlayer(25); recoverOppression(100); } 
+      desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更（消すとダメージ）", 
+      action: () => { damagePlayer(25); convertQuestionToFake(); } 
     },
     { 
       name: "買収された報道", 
@@ -635,7 +636,6 @@
       if (id === "citizen") baseBuffs.citizenCount++;
     });
 
-    // 市民効果の上限（キャップ）を適応
     const effectiveCitizenCount = Math.min(baseBuffs.citizenCount, CITIZEN_CAP);
     let citizenMult = 1.0 + (effectiveCitizenCount * 0.15);
 
@@ -760,7 +760,6 @@
 
       let hasDialogueMatch = false;
 
-      // 各グループ単位で計算（同時消し・マッチ数威力を適用）
       matchGroups.forEach(group => {
         const count = group.tiles.length;
         let matchCountMult = 1.0;
@@ -775,6 +774,9 @@
             let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
             gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
             hasDialogueMatch = true;
+            cleanseFakeTiles(1);
+          } else if (t.type === "FAKE") {
+            damagePlayer(DROPS.FAKE.penaltyDamage);
           } else if (DROPS[t.type]) {
             let basePower = DROPS[t.type].power;
             let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
@@ -789,6 +791,7 @@
             if (t.type === "VERIFY") {
               let revealCount = 1 + buffs.reporterCount;
               revealBlackout(revealCount);
+              cleanseFakeTiles(revealCount);
             }
           }
         });
@@ -968,6 +971,30 @@
     }
   }
 
+  function convertQuestionToFake() {
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+        if (gameState.board[r][c] && gameState.board[r][c].type === "QUESTION" && !gameState.board[r][c].blackout) {
+          gameState.board[r][c].type = "FAKE";
+        }
+      }
+    }
+  }
+
+  function cleanseFakeTiles(count) {
+    let fakes = [];
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+        if (gameState.board[r][c] && gameState.board[r][c].type === "FAKE" && !gameState.board[r][c].blackout) {
+          fakes.push(gameState.board[r][c]);
+        }
+      }
+    }
+    for (let i = 0; i < Math.min(count, fakes.length); i++) {
+      fakes[i].type = "QUESTION";
+    }
+  }
+
   function revealBlackout(count) {
     let blackouts = [];
     for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
@@ -995,10 +1022,6 @@
 
   function damagePlayer(amount) {
     gameState.playerHp = Math.max(0, gameState.playerHp - amount);
-  }
-
-  function recoverOppression(amount) {
-    gameState.oppressionHp = Math.min(TOTAL_OPPRESSION_MAX, gameState.oppressionHp + amount);
   }
 
   function bribeMember() {
@@ -1059,6 +1082,7 @@
     updateAndDrawPopups();
   }
 
+  /* デママス描画ロジック（絵文字なし・「デマ」文字のみ中央に配置） */
   function drawTile(r, c, tile, x, y, isDragged = false) {
     const ts = BOARD_CONFIG.TILE_SIZE;
     ctx.save();
@@ -1088,10 +1112,19 @@
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = "28px serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(dropData.symbol, ts / 2, ts / 2);
+      if (tile.type === "FAKE") {
+        // 絵文字なし：「デマ」テキストを中央に大きめで表示
+        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#59359a";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("デマ", ts / 2, ts / 2);
+      } else {
+        ctx.font = "28px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(dropData ? dropData.symbol : "❓", ts / 2, ts / 2);
+      }
     }
     ctx.restore();
   }
@@ -1178,6 +1211,10 @@
     gameState.lastResult = { isWin, score: gameState.score, remTurns: gameState.remainingTurns };
     document.getElementById("modal-title").innerText = isWin ? "クリア" : "ゲームオーバー";
     document.getElementById("modal-body").innerHTML = message + `<br><br>スコア: <strong>${gameState.score}</strong> pt`;
+    
+    const restartBtn = document.getElementById("btn-result-restart");
+    restartBtn.innerText = isWin ? "もう一度プレイ" : "あきらめない";
+
     document.getElementById("result-modal").style.display = "flex";
   }
 
@@ -1205,7 +1242,6 @@
     drawBoard();
   }
 
-  
   function renderPartyModalSlots() {
     const sContainer = document.getElementById("modal-slots");
     sContainer.innerHTML = "";
