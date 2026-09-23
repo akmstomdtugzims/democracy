@@ -226,7 +226,7 @@
     }
 
     /* -------------------------------------------------------------------------
-       6. モーダル ダイアログ
+       6. モーダル ダイアログ & SNSアイコンボタン
        ------------------------------------------------------------------------- */
     .modal {
       position: absolute;
@@ -251,8 +251,9 @@
     .btn-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       margin-top: 12px;
+      align-items: center;
     }
 
     .btn {
@@ -265,15 +266,38 @@
       border-radius: 16px;
       cursor: pointer;
       text-align: center;
+      width: 100%;
+      max-width: 240px;
     }
 
-    .btn-share {
-      background: #000000;
-      color: #ffffff;
+    /* SNSシェアアイコン行 */
+    .share-btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .btn-share-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.2s;
+    }
+
+    .btn-share-icon:active {
+      transform: scale(0.92);
+    }
+
+    .btn-share-x {
+      background: #000000;
+      color: #ffffff;
     }
 
     .btn-share-other {
@@ -416,8 +440,12 @@
     <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0; text-align:center;"></div>
     <div class="btn-group">
       <button class="btn" id="btn-result-restart">あきらめない</button>
-      <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
-      <button class="btn btn-share btn-share-other" id="btn-share-other">その他の方法で共有</button>
+      
+      <!-- SNSシェア用アイコンボタン列 -->
+      <div class="share-btn-row">
+        <button class="btn-share-icon btn-share-x" id="btn-share-x" title="𝕏 でシェア">𝕏</button>
+        <button class="btn-share-icon btn-share-other" id="btn-share-other" title="その他の方法でシェア">🔗</button>
+      </div>
     </div>
   </div>
 
@@ -427,7 +455,7 @@
     <p style="font-size:0.7rem; color:#666; text-align:center; margin-bottom:8px;">枠を選択してからメンバーを指定（重複可能）</p>
     <div class="select-grid" id="modal-slots"></div>
     
-    <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem;">メンバーをランダム設定</button>
+    <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem; max-width: 100%;">メンバーをランダム設定</button>
     <div class="job-list" id="modal-job-list"></div>
 
     <div style="font-size:0.75rem; font-weight:bold; margin-top:8px;">■ 行動ドロップ一覧</div>
@@ -444,7 +472,7 @@
       </tbody>
     </table>
 
-    <button class="btn" id="btn-party-close" style="margin-top:12px;">決定して戻る</button>
+    <button class="btn" id="btn-party-close" style="margin-top:12px; max-width: 100%;">決定して戻る</button>
   </div>
 </div>
 
@@ -476,8 +504,8 @@ const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
 const JOBS = [
   { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: 「デモ🪧」威力アップ＆全体効果強化" },
-  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を自動解除" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」効果強化（複数被りで効果減衰）" },
+  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法の支配: 3Tごとに非開示解除・デマ浄化・デマ無効バリア獲得" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 「検証🔍」効果強化（複数被りで効果減衰）" },
   { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量アップ" },
   { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: 「検証🔍」性能向上＆コンボボーナス" }
 ];
@@ -500,6 +528,7 @@ class Game {
       party: [],
       partyIconIndices: [],
       bribedMembers: [false, false, false, false, false],
+      lawyerShields: 0, // 弁護士スキルによるデマ防止バリア
       selectedSlot: 0,
       popups: [],
       dragState: {
@@ -653,6 +682,7 @@ class Game {
       baseDecayRate: 4,
       elapsedTurns: 0,
       bribedMembers: [false, false, false, false, false],
+      lawyerShields: 0,
       popups: []
     });
 
@@ -701,7 +731,6 @@ class Game {
       if (id === "citizen") buffs.citizenCount++;
     });
 
-    // 記者の重複減衰計算 (1体目: +50%, 2体目: +25%, 3体目以降: +10%)
     if (buffs.reporterCount > 0) {
       let add = 0;
       for (let i = 1; i <= buffs.reporterCount; i++) {
@@ -712,7 +741,6 @@ class Game {
       buffs.verifyMult = 1.0 + add;
     }
 
-    // 市民によるデモ強化
     buffs.demoMult = 1.0 + (buffs.citizenCount * 0.30);
     buffs.citizenMult = 1.0 + (Math.min(buffs.citizenCount, 3) * 0.10);
 
@@ -947,11 +975,14 @@ class Game {
 
     this.damagePlayer(this.state.baseDecayRate);
 
+    // 弁護士スキル（法の支配）処理
     const buffs = this.calculateBuffs();
     if (buffs.lawyerCount > 0 && this.state.elapsedTurns % 3 === 0) {
       let count = 2 * buffs.lawyerCount;
       this.revealBlackout(count);
-      this.showSkillBanner("法的手段", `非開示マスを ${count} つ自動解除`);
+      this.cleanseFakeTiles(2 * buffs.lawyerCount);
+      this.state.lawyerShields += buffs.lawyerCount; // デマ攻撃無効バリアを追加
+      this.showSkillBanner("法の支配", `非開示${count}マス解除 / デマ浄化 / デマブロック獲得`);
     }
 
     if (this.state.enemyCd <= 0) {
@@ -974,6 +1005,12 @@ class Game {
   }
 
   convertQuestionToFake() {
+    // 弁護士バリアがある場合はデマ化を無効化
+    if (this.state.lawyerShields > 0) {
+      this.state.lawyerShields--;
+      this.showSkillBanner("法的防壁", "「法の支配」によりデマ化をブロック！");
+      return;
+    }
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
         let t = this.state.board[r][c];
@@ -1184,7 +1221,7 @@ class Game {
     const buffs = this.calculateBuffs();
     let descLines = [];
     if (buffs.citizenCount > 0) descLines.push(`デモ威力x${buffs.demoMult.toFixed(1)}`);
-    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解除${2*buffs.lawyerCount}`);
+    if (buffs.lawyerCount > 0) descLines.push(`3Tごと解除${2*buffs.lawyerCount}+浄化/防壁`);
     if (buffs.reporterCount > 0) descLines.push(`検証x${buffs.verifyMult.toFixed(1)}`);
     if (buffs.expertCount > 0) descLines.push(`コンボ強化`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
@@ -1233,14 +1270,14 @@ class Game {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        // キャンセル時は何もしない
+        // ユーザーキャンセル時
       }
     } else {
       try {
         await navigator.clipboard.writeText(`${shareData.text}${gameUrl}`);
         alert("結果のテキストとリンクをクリップボードにコピーしました！");
       } catch (err) {
-        alert("共有に対応していません。");
+        alert("お使いのブラウザは共有に対応していません。");
       }
     }
   }
