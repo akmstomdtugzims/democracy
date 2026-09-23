@@ -40,7 +40,8 @@
       max-height: 900px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start; /* 上から順に表示するため変更 */
+      gap: 8px; /* 要素間の隙間を指定 */
       padding: 10px;
       position: relative;
     }
@@ -402,6 +403,10 @@
     <h2>パーティ選択</h2>
     <p style="font-size:0.7rem; color:#666; text-align:center; margin-bottom:8px;">枠を選択してからメンバーを指定（重複可能）</p>
     <div class="select-grid" id="modal-slots"></div>
+    
+    <!-- ランダムボタンを追加 -->
+    <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem;">メンバーをランダム設定</button>
+
     <div class="job-list" id="modal-job-list"></div>
 
     <div style="font-size:0.75rem; font-weight:bold; margin-top:8px;">■ 行動ドロップ一覧</div>
@@ -532,6 +537,10 @@
 
     document.getElementById("btn-party-open").onclick = openPartyModal;
     document.getElementById("btn-party-close").onclick = closePartyModal;
+    document.getElementById("btn-party-random").onclick = () => {
+      randomizeParty();
+      renderPartyModalSlots();
+    };
     document.getElementById("btn-reset").onclick = initGame;
     document.getElementById("btn-result-restart").onclick = initGame;
     document.getElementById("btn-share-x").onclick = shareToX;
@@ -1059,104 +1068,89 @@
     if (buffs.comboBonus > 0) descLines.push(`コンボ強化`);
     if (buffs.healMult > 1) descLines.push(`回復+${Math.round((buffs.healMult-1)*100)}%`);
 
-    document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（無効化中）");
+    document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
   }
 
-  function showSkillBanner(enemyName, skillName, effectDesc) {
+  function showSkillBanner(enemyName, skillName, desc) {
     const banner = document.getElementById("skill-banner");
-    banner.innerHTML = `${enemyName}【${skillName}】<span class="skill-effect-text">${effectDesc}</span>`;
+    banner.innerHTML = `${enemyName}のスキル発動！<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
     banner.style.display = "block";
     setTimeout(() => {
       banner.style.display = "none";
-    }, 1500);
+    }, 2500);
   }
 
-  function showResultModal(isWin, messageHtml) {
-    gameState.lastResult = {
-      isWin,
-      score: gameState.score,
-      remTurns: gameState.remainingTurns
-    };
-
-    document.getElementById("modal-title").innerText = isWin ? "CLEAR!" : "GAME OVER";
-    document.getElementById("modal-body").innerHTML = `
-      ${messageHtml}<br><br>
-      <strong>最終スコア: ${gameState.score} pt</strong><br>
-      残りターン数: ${gameState.remainingTurns}
-    `;
+  function showResultModal(isWin, message) {
+    gameState.lastResult = { isWin, score: gameState.score, remTurns: gameState.remainingTurns };
+    document.getElementById("modal-title").innerText = isWin ? "クリア！" : "ゲームオーバー";
+    document.getElementById("modal-body").innerHTML = message + `<br><br>スコア: <strong>${gameState.score}</strong> pt`;
     document.getElementById("result-modal").style.display = "flex";
   }
 
-  /* ==========================================================================
-     9. PARTY SELECT MODAL
-     ========================================================================== */
+  function shareToX() {
+    const res = gameState.lastResult;
+    const text = encodeURIComponent(
+      `Democracy Puzzle で遊んだよ！\nスコア: ${res.score} pt\n結果: ${res.isWin ? "クリア成功" : "失敗"}\n#DemocracyPuzzle\n${window.location.href}`
+    );
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+  }
+
   function openPartyModal() {
     gameState.selectedSlot = 0;
     renderPartyModalSlots();
-    renderPartyModalJobs();
+    renderPartyModalJobList();
     document.getElementById("party-modal").style.display = "flex";
   }
 
   function closePartyModal() {
     document.getElementById("party-modal").style.display = "none";
     updateUI();
+    drawBoard();
   }
 
   function renderPartyModalSlots() {
-    const container = document.getElementById("modal-slots");
-    container.innerHTML = "";
-    for (let i = 0; i < 5; i++) {
-      const jobId = gameState.party[i];
-      const job = JOBS.find(j => j.id === jobId);
-      const icon = job ? job.icons[gameState.partyIconIndices[i] % job.icons.length] : "❓";
-
-      const slot = document.createElement("div");
-      slot.className = "select-slot" + (i === gameState.selectedSlot ? " active" : "");
-      slot.innerText = icon;
-      slot.onclick = () => {
-        gameState.selectedSlot = i;
+    const sContainer = document.getElementById("modal-slots");
+    sContainer.innerHTML = "";
+    gameState.party.forEach((id, idx) => {
+      const job = JOBS.find(j => j.id === id);
+      const icon = job ? job.icons[gameState.partyIconIndices[idx] % job.icons.length] : "❓";
+      const div = document.createElement("div");
+      div.className = "select-slot" + (gameState.selectedSlot === idx ? " active" : "");
+      div.innerText = icon;
+      div.onclick = () => {
+        gameState.selectedSlot = idx;
         renderPartyModalSlots();
       };
-      container.appendChild(slot);
-    }
+      sContainer.appendChild(div);
+    });
   }
 
-  function renderPartyModalJobs() {
-    const container = document.getElementById("modal-job-list");
-    container.innerHTML = "";
+  function renderPartyModalJobList() {
+    const jContainer = document.getElementById("modal-job-list");
+    jContainer.innerHTML = "";
     JOBS.forEach(job => {
       const item = document.createElement("div");
       item.className = "job-item";
       item.innerHTML = `
         <div class="job-info">
           <div>${job.icons[0]} ${job.name}</div>
-          <div style="color:#666; font-size:0.68rem;">${job.desc}</div>
+          <div style="color:#666; font-size:0.65rem;">${job.desc}</div>
         </div>
       `;
       const btn = document.createElement("button");
       btn.className = "add-btn";
-      btn.innerText = "選択";
+      btn.innerText = "配属";
       btn.onclick = () => {
-        gameState.party[gameState.selectedSlot] = job.id;
-        gameState.partyIconIndices[gameState.selectedSlot] = Math.floor(Math.random() * job.icons.length);
-        if (gameState.selectedSlot < 4) gameState.selectedSlot++;
+        const slotIdx = gameState.selectedSlot;
+        gameState.party[slotIdx] = job.id;
+        gameState.partyIconIndices[slotIdx] = Math.floor(Math.random() * job.icons.length);
         renderPartyModalSlots();
       };
       item.appendChild(btn);
-      container.appendChild(item);
+      jContainer.appendChild(item);
     });
   }
-
-  /* ==========================================================================
-     10. SHARE FUNCTIONALITY
-     ========================================================================== */
-  function shareToX() {
-    const { isWin, score, remTurns } = gameState.lastResult;
-    const statusText = isWin ? "健全な議論の場が取り戻されました" : "【ゲームオーバー】社会の無関心に呑み込まれました…";
-    const text = `【Democracy Puzzle】\n${statusText}\nスコア: ${score} pt / 残りターン: ${remTurns}\n`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
-  }
 </script>
+
 </body>
 </html>
