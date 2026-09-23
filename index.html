@@ -393,7 +393,7 @@
     <!-- 抑圧度 -->
     <div class="bar-container">
       <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
-      <div id="oppression-hp-text" class="bar-text">抑圧度 2500 / 2500</div>
+      <div id="oppression-hp-text" class="bar-text">抑圧度 3000 / 3000</div>
     </div>
 
     <!-- 敵の行動ターン表示 -->
@@ -447,10 +447,10 @@
       </thead>
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ浄化</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ解消</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
-        <tr><td>対話</td><td>💖</td><td>気力回復 + 買収解除 + デマ浄化</td></tr>
+        <tr><td>対話</td><td>💖</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
       </tbody>
     </table>
 
@@ -464,10 +464,9 @@
      ========================================================================== */
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
-  const TOTAL_OPPRESSION_MAX = 3000;
+  const TOTAL_OPPRESSION_MAX = 3000; // 抑圧度を3000に変更
   const CITIZEN_CAP = 3;
 
- 
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
     FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "", name: "デマ", power: 0, penaltyDamage: 3 },
@@ -492,7 +491,7 @@
       name: "世論誘導広報室", 
       skillName: "プロパガンダ", 
       cdMax: 3,
-      desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更（消すとダメージ）", 
+      desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更（「検証🔍」「対話💖」で解消）", 
       action: () => { damagePlayer(25); convertQuestionToFake(); } 
     },
     { 
@@ -603,6 +602,9 @@
     gameState.elapsedTurns = 0;
     gameState.bribedMembers = [false, false, false, false, false];
     gameState.popups = [];
+    
+    // 敵CD上限を初期化
+    ENEMIES.forEach(e => e.cdMax = 3);
     
     setupEnemy(-1);
     createBoard();
@@ -774,7 +776,7 @@
             let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
             gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
             hasDialogueMatch = true;
-            cleanseFakeTiles(1);
+            cleanseFakeTiles(2); // 対話1つごとにデマ2マス解除
           } else if (t.type === "FAKE") {
             damagePlayer(DROPS.FAKE.penaltyDamage);
           } else if (DROPS[t.type]) {
@@ -791,7 +793,7 @@
             if (t.type === "VERIFY") {
               let revealCount = 1 + buffs.reporterCount;
               revealBlackout(revealCount);
-              cleanseFakeTiles(revealCount);
+              cleanseFakeTiles(2); // 検証1つごとにデマ2マス解除
             }
           }
         });
@@ -831,7 +833,6 @@
   function findMatchGroups() {
     let groups = [];
     
-    // 横方向のマッチ判定
     for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
       let c = 0;
       while (c < BOARD_CONFIG.COLS) {
@@ -856,7 +857,6 @@
       }
     }
 
-    // 縦方向のマッチ判定
     for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
       let r = 0;
       while (r < BOARD_CONFIG.ROWS) {
@@ -943,6 +943,11 @@
     gameState.remainingTurns--;
     gameState.enemyCd--;
     gameState.elapsedTurns++;
+
+    // 残りターンが10以下になったら敵の最大行動周期を3→2ターンに変更
+    if (gameState.remainingTurns <= 10) {
+      ENEMIES.forEach(e => e.cdMax = 2);
+    }
 
     damagePlayer(gameState.baseDecayRate);
 
@@ -1082,7 +1087,6 @@
     updateAndDrawPopups();
   }
 
-  /* デママス描画ロジック（絵文字なし・「デマ」文字のみ中央に配置） */
   function drawTile(r, c, tile, x, y, isDragged = false) {
     const ts = BOARD_CONFIG.TILE_SIZE;
     ctx.save();
@@ -1113,7 +1117,6 @@
       ctx.stroke();
 
       if (tile.type === "FAKE") {
-        // 絵文字なし：「デマ」テキストを中央に大きめで表示
         ctx.font = "bold 16px sans-serif";
         ctx.fillStyle = "#59359a";
         ctx.textAlign = "center";
@@ -1284,7 +1287,7 @@
       `;
       const btn = document.createElement("button");
       btn.className = "add-btn";
-      btn.innerText = "配属";
+      btn.innerText = "選択";
       btn.onclick = () => {
         const slotIdx = gameState.selectedSlot;
         gameState.party[slotIdx] = job.id;
