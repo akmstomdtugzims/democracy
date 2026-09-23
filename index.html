@@ -12,7 +12,7 @@
       --border-color: #dee2e6;
       --accent-red: #d90429;
       --accent-blue: #0077b6;
-      --accent-green: #2b9348;
+      --accent-green: #00b4d8; /* 気力ゲージ用の水色へ変更 */
     }
 
     * {
@@ -128,6 +128,7 @@
       font-size: 0.8rem;
       font-weight: normal;
       color: var(--text-main);
+      line-height: 1.3;
     }
 
     .bar-container {
@@ -184,6 +185,7 @@
       text-align: center;
       font-size: 0.65rem;
       position: relative;
+      cursor: pointer;
     }
 
     .member-icon {
@@ -339,12 +341,12 @@
     <!-- 抑圧度（抑圧度ゲージ） -->
     <div class="bar-container">
       <div id="oppression-hp" class="bar-fill enemy-hp-fill"></div>
-      <div id="oppression-hp-text" class="bar-text">抑圧度 1800 / 1800</div>
+      <div id="oppression-hp-text" class="bar-text">抑圧度 2500 / 2500</div>
     </div>
 
     <!-- 敵の行動ターン表示 -->
     <div class="info-row" style="margin-bottom: 6px;">
-      <span class="enemy-status-text" id="enemy-turn-info">3ターン後 世論誘導広報室【<strong>プロパガンダ</strong>】</span>
+      <span class="enemy-status-text" id="enemy-turn-info">3ターン後 世論誘導広報室【<strong>プロパガンダ</strong>】<br><span style="font-size:0.7rem; color:#666;">（25ダメージ＋抑圧度回復+100）</span></span>
     </div>
 
     <!-- 気力（気力ゲージ） -->
@@ -368,7 +370,7 @@
   <!-- Result Modal -->
   <div id="result-modal" class="modal">
     <h2 id="modal-title">結果発表</h2>
-    <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0;"></div>
+    <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0; text-align:center;"></div>
     <button class="btn" id="btn-result-restart">もう一度プレイ</button>
   </div>
 
@@ -403,7 +405,8 @@
      ========================================================================== */
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
-  const TOTAL_OPPRESSION_MAX = 1800;
+  // 抑圧度上限を引き上げて高難易度化
+  const TOTAL_OPPRESSION_MAX = 2500;
 
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
@@ -428,7 +431,7 @@
       name: "世論誘導広報室", 
       skillName: "プロパガンダ", 
       cdMax: 3,
-      desc: "25ダメージ＋抑圧度ゲージの回復(+100)", 
+      desc: "25ダメージ＋抑圧度回復(+100)", 
       action: () => { damagePlayer(25); recoverOppression(100); } 
     },
     { 
@@ -534,15 +537,21 @@
     gameState.bribedMembers = [false, false, false, false, false];
     gameState.popups = [];
     
-    setupEnemy(0);
+    setupEnemy(-1); // ランダムに敵を抽出
     createBoard();
     updateUI();
     drawBoard();
   }
 
-  function setupEnemy(idx) {
-    gameState.currentEnemyIdx = idx;
-    gameState.enemyCd = ENEMIES[idx].cdMax;
+  // 敵のセットアップ（順不同・ランダム選出）
+  function setupEnemy(prevIdx) {
+    let nextIdx;
+    do {
+      nextIdx = Math.floor(Math.random() * ENEMIES.length);
+    } while (ENEMIES.length > 1 && nextIdx === prevIdx);
+
+    gameState.currentEnemyIdx = nextIdx;
+    gameState.enemyCd = ENEMIES[nextIdx].cdMax;
   }
 
   function calculateBuffs() {
@@ -585,6 +594,7 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  // ドラッグ開始（非開示マスもつかめるように変更）
   function startDrag(e) {
     if (gameState.animating) return;
     const pos = getPos(e);
@@ -592,7 +602,6 @@
     const r = Math.floor(pos.y / BOARD_CONFIG.TILE_SIZE);
 
     if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
-      if (gameState.board[r][c].blackout) return;
       gameState.dragState.isDragging = true;
       gameState.dragState.startTile = { r, c };
       gameState.dragState.targetTile = { r, c };
@@ -601,6 +610,7 @@
     }
   }
 
+  // ドラッグ中（非开示マスとの移動・入れ替えを許可）
   function drag(e) {
     if (!gameState.dragState.isDragging || gameState.animating) return;
     const pos = getPos(e);
@@ -608,25 +618,22 @@
 
     const c = Math.floor(pos.x / BOARD_CONFIG.TILE_SIZE);
     const r = Math.floor(pos.y / BOARD_CONFIG.TILE_SIZE);
-
     const start = gameState.dragState.startTile;
 
-    // 上下左右1マス隣の移動のみを検知して確定
     if (r >= 0 && r < BOARD_CONFIG.ROWS && c >= 0 && c < BOARD_CONFIG.COLS) {
       const rowDiff = Math.abs(r - start.r);
       const colDiff = Math.abs(c - start.c);
 
       if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
-        if (!gameState.board[r][c].blackout) {
-          gameState.dragState.targetTile = { r, c };
-          endDrag(); // 移動先が定まった時点で直接ドラッグ終了・判定へ移行
-          return;
-        }
+        gameState.dragState.targetTile = { r, c };
+        endDrag();
+        return;
       }
     }
     drawBoard();
   }
 
+  // ドラッグ終了（マッチ不成立でもそのまま移動を確定させてターン消費）
   async function endDrag() {
     if (!gameState.dragState.isDragging) return;
     gameState.dragState.isDragging = false;
@@ -634,7 +641,6 @@
     const start = gameState.dragState.startTile;
     const target = gameState.dragState.targetTile;
 
-    // 移動先がない場合は終了
     if (start.r === target.r && start.c === target.c) {
       drawBoard();
       return;
@@ -647,18 +653,11 @@
 
     let matches = findMatches();
     if (matches.length > 0) {
-      // マッチ成立（ターン消費処理）
       processMatches();
     } else {
-      // マッチ不成立（元の配置に戻す）
-      gameState.animating = true;
+      // マッチが成立しなくてもロールバックせず移動確定・ターン消費
       drawBoard();
-      await sleep(150);
-      let revertTemp = gameState.board[start.r][start.c];
-      gameState.board[start.r][start.c] = gameState.board[target.r][target.c];
-      gameState.board[target.r][target.c] = revertTemp;
-      gameState.animating = false;
-      drawBoard();
+      endTurn();
     }
   }
 
@@ -726,12 +725,13 @@
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // マッチ判定（非開示マスが含まれる場合は絶対に揃わない）
   function findMatches() {
     let matched = [];
     for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
       for (let c = 0; c < BOARD_CONFIG.COLS - 2; c++) {
         let t1 = gameState.board[r][c], t2 = gameState.board[r][c+1], t3 = gameState.board[r][c+2];
-        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
+        if (!t1.blackout && !t2.blackout && !t3.blackout && t1.type === t2.type && t2.type === t3.type) {
           matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
         }
       }
@@ -739,7 +739,7 @@
     for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
       for (let r = 0; r < BOARD_CONFIG.ROWS - 2; r++) {
         let t1 = gameState.board[r][c], t2 = gameState.board[r+1][c], t3 = gameState.board[r+2][c];
-        if (!t1.blackout && t1.type === t2.type && t2.type === t3.type) {
+        if (!t1.blackout && !t2.blackout && !t3.blackout && t1.type === t2.type && t2.type === t3.type) {
           matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
         }
       }
@@ -819,19 +819,19 @@
       showSkillBanner(enemy.name, enemy.skillName, enemy.desc);
       enemy.action();
 
-      const nextEnemyIdx = (gameState.currentEnemyIdx + 1) % ENEMIES.length;
-      setupEnemy(nextEnemyIdx);
+      setupEnemy(gameState.currentEnemyIdx);
     }
 
     updateUI();
     drawBoard();
 
+    // 勝敗判定（テーマに準拠した和名タイトル表現へ調整）
     if (gameState.oppressionHp <= 0) {
-      showResultModal(true, "構造的抑圧の完全打破");
+      showResultModal(true, "【市民運動の勝利】<br>構造的抑圧を打ち破り、民主主義を勝ち取りました！");
     } else if (gameState.playerHp <= 0) {
-      showResultModal(false, "気力の完全喪失・社会への無関心化");
+      showResultModal(false, "【社会運動の挫折】<br>市民の気力が尽き、社会への無関心が定着してしまいました。");
     } else if (gameState.remainingTurns <= 0) {
-      showResultModal(false, "タイムオーバー（抑圧を削り切れず）");
+      showResultModal(false, "【抑圧の継続】<br>規定ターン内に抑圧度を削り切ることができませんでした。");
     }
   }
 
@@ -993,7 +993,8 @@
     document.getElementById("player-hp-text").innerText = `気力 ${gameState.playerHp} / 100`;
 
     const currentEnemy = ENEMIES[gameState.currentEnemyIdx];
-    document.getElementById("enemy-turn-info").innerHTML = `${gameState.enemyCd}ターン後 ${currentEnemy.name}【<strong>${currentEnemy.skillName}</strong>】`;
+    document.getElementById("enemy-turn-info").innerHTML = 
+      `${gameState.enemyCd}ターン後 ${currentEnemy.name}【<strong>${currentEnemy.skillName}</strong>】<br><span style="font-size:0.7rem; color:#666;">（${currentEnemy.desc}）</span>`;
     
     document.getElementById("oppression-hp").style.width = `${(gameState.oppressionHp / TOTAL_OPPRESSION_MAX) * 100}%`;
     document.getElementById("oppression-hp-text").innerText = `抑圧度 ${gameState.oppressionHp} / ${TOTAL_OPPRESSION_MAX}`;
@@ -1034,6 +1035,12 @@
     setTimeout(() => { banner.style.display = "none"; }, 2000);
   }
 
+  function showResultModal(isWin, message) {
+    document.getElementById("modal-title").innerText = isWin ? "達成" : "失敗";
+    document.getElementById("modal-body").innerHTML = message + `<br><br>最終スコア: <strong>${gameState.score}</strong> pt`;
+    document.getElementById("result-modal").style.display = "flex";
+  }
+
   function openPartyModal() {
     renderModalSlots();
     renderJobList();
@@ -1055,7 +1062,10 @@
       div.className = "select-slot";
       if (idx === gameState.selectedSlot) div.style.borderColor = "var(--accent-blue)";
       div.innerText = icon;
-      div.onclick = () => { gameState.selectedSlot = idx; renderModalSlots(); };
+      div.onclick = () => {
+        gameState.selectedSlot = idx;
+        renderModalSlots();
+      };
       container.appendChild(div);
     });
   }
@@ -1066,37 +1076,20 @@
     JOBS.forEach(job => {
       const div = document.createElement("div");
       div.className = "job-item";
-      const iconDisplay = job.icons.join("");
       div.innerHTML = `
         <div class="job-info">
-          <div>${iconDisplay} ${job.name}</div>
+          <div>${job.icons[0]} ${job.name}</div>
           <div style="color:#666;">${job.desc}</div>
         </div>
-        <button class="add-btn" data-jobid="${job.id}">選択</button>
+        <button class="add-btn">選択</button>
       `;
-      div.querySelector(".add-btn").onclick = () => setSlotJob(job.id);
+      div.querySelector(".add-btn").onclick = () => {
+        gameState.party[gameState.selectedSlot] = job.id;
+        gameState.partyIconIndices[gameState.selectedSlot] = Math.floor(Math.random() * job.icons.length);
+        renderModalSlots();
+      };
       container.appendChild(div);
     });
-  }
-
-  function setSlotJob(jobId) {
-    gameState.party[gameState.selectedSlot] = jobId;
-    const job = JOBS.find(j => j.id === jobId);
-    gameState.partyIconIndices[gameState.selectedSlot] = Math.floor(Math.random() * job.icons.length);
-    renderModalSlots();
-  }
-
-  function showResultModal(isWin, reasonText) {
-    const modal = document.getElementById("result-modal");
-    document.getElementById("modal-title").innerText = isWin ? "VICTORY" : "GAME OVER";
-    document.getElementById("modal-body").innerHTML = `
-      <div style="text-align:center;">
-        <p style="font-weight:bold; font-size:1.1rem; color:${isWin ? "var(--accent-green)" : "var(--accent-red)"};">${reasonText}</p>
-        <p style="margin-top:12px;">最終スコア: <strong>${gameState.score}</strong> pt</p>
-        <p>残りターン: <strong>${gameState.remainingTurns}</strong></p>
-      </div>
-    `;
-    modal.style.display = "flex";
   }
 </script>
 </body>
