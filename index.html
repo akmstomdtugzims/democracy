@@ -430,11 +430,11 @@
         <tr><th>種類</th><th>アイコン</th><th>効果</th></tr>
       </thead>
       <tbody>
-        <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
+        <tr><td>疑問</td><td>💭</td><td>10 pt</td></tr>
         <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ解消</td></tr>
         <tr><td>署名</td><td>📜</td><td>20 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>20 pt</td></tr>
-        <tr><td>対話</td><td>🗣️</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
+        <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
       </tbody>
     </table>
 
@@ -459,12 +459,12 @@ const CONFIG = {
 };
 
 const DROPS = {
-  QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
+  QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💭", name: "疑問", power: 10 },
   FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "デマ", power: 0, penaltyDamage: 3 },
   VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
   SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 20 },
   DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 20 },
-  DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "🗣️", name: "対話", heal: 12 }
+  DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "🤝", name: "対話", heal: 12 }
 };
 
 const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
@@ -473,7 +473,7 @@ const JOBS = [
   { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民連帯: すべての効果を +15% 強化" },
   { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "法的手段: 3ターンごとに「非開示マス」を2つ自動解除" },
   { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道追求: 「検証🔍」効果1.8倍 & 検証時の非開示解除数+1" },
-  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🗣️」による気力回復量 +50%" },
+  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "対話基盤: 「対話🤝」による気力回復量 +50%" },
   { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "構造分析: コンボ発生時のスコア倍率ボーナス" }
 ];
 
@@ -520,7 +520,7 @@ class Game {
         name: "世論誘導広報室", 
         skillName: "プロパガンダ", 
         cdMax: 3,
-        desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
+        desc: "25ダメージ＋すべての「疑問💭」を「デマ」に変更", 
         action: () => { this.damagePlayer(25); this.convertQuestionToFake(); } 
       },
       { 
@@ -756,7 +756,7 @@ class Game {
             hasDialogueMatch = true;
             this.cleanseFakeTiles(2);
             if (!dialogueSkillTriggered) {
-              this.showSkillBanner("市民側", "対話🗣️", "気力回復 / 買収解除 / デマ2マス解消");
+              this.showSkillBanner("あなた", "対話🤝", "気力回復 / 買収解除 / デマ2マス解消");
               dialogueSkillTriggered = true;
             }
           } else if (t.type === "FAKE") {
@@ -775,7 +775,7 @@ class Game {
               this.revealBlackout(revealCount);
               this.cleanseFakeTiles(2);
               if (!verifySkillTriggered) {
-                this.showSkillBanner("市民側", "検証🔍", `非開示${revealCount}マス解除 / デマ2マス解消`);
+                this.showSkillBanner("あなた", "検証🔍", `非開示${revealCount}マス解除 / デマ2マス解消`);
                 verifySkillTriggered = true;
               }
             }
