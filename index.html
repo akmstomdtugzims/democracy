@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Democracy Puzzle</title>
   <style>
+    /* ==========================================================================
+       1. CSS VARIABLES & BASE STYLES
+       ========================================================================== */
     :root {
       --bg-color: #f8f9fa;
       --panel-bg: #ffffff;
@@ -33,6 +36,9 @@
       overflow: hidden;
     }
 
+    /* ==========================================================================
+       2. LAYOUT & CONTAINERS
+       ========================================================================== */
     #game-container {
       width: 100%;
       max-width: 420px;
@@ -44,49 +50,6 @@
       gap: 8px; /* 要素間の隙間を指定 */
       padding: 10px;
       position: relative;
-    }
-
-    .canvas-container {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-    }
-
-    canvas {
-      background: #ffffff;
-      border: 2px solid #ced4da;
-      border-radius: 8px;
-      touch-action: none;
-    }
-
-    #skill-banner {
-      position: absolute;
-      top: 35%;
-      left: 0;
-      width: 100%;
-      background: #000000;
-      color: #ffffff;
-      text-align: center;
-      padding: 12px 16px;
-      font-weight: bold;
-      font-size: 0.95rem;
-      z-index: 60;
-      display: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      pointer-events: none;
-      line-height: 1.4;
-      border-top: 1px solid #333;
-      border-bottom: 1px solid #333;
-    }
-
-    #skill-banner .skill-effect-text {
-      font-size: 0.8rem;
-      color: #cccccc;
-      font-weight: normal;
-      display: block;
-      margin-top: 4px;
     }
 
     .header-bar {
@@ -109,6 +72,9 @@
       cursor: pointer;
     }
 
+    /* ==========================================================================
+       3. STATUS PANEL & BARS
+       ========================================================================== */
     .status-panel {
       background: var(--panel-bg);
       border: 1px solid var(--border-color);
@@ -167,6 +133,9 @@
       color: #ffffff;
     }
 
+    /* ==========================================================================
+       4. PARTY DISPLAY (MAIN SCREEN)
+       ========================================================================== */
     .party-section {
       background: var(--panel-bg);
       border: 1px solid var(--border-color);
@@ -214,6 +183,55 @@
       line-height: 1.2;
     }
 
+    /* ==========================================================================
+       5. CANVAS & BANNER
+       ========================================================================== */
+    .canvas-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    canvas {
+      background: #ffffff;
+      border: 2px solid #ced4da;
+      border-radius: 8px;
+      touch-action: none;
+    }
+
+    #skill-banner {
+      position: absolute;
+      top: 35%;
+      left: 0;
+      width: 100%;
+      background: #000000;
+      color: #ffffff;
+      text-align: center;
+      padding: 12px 16px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      z-index: 60;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      pointer-events: none;
+      line-height: 1.4;
+      border-top: 1px solid #333;
+      border-bottom: 1px solid #333;
+    }
+
+    #skill-banner .skill-effect-text {
+      font-size: 0.8rem;
+      color: #cccccc;
+      font-weight: normal;
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* ==========================================================================
+       6. MODALS & PARTY SELECT
+       ========================================================================== */
     .modal {
       position: absolute;
       top: 0;
@@ -270,6 +288,13 @@
       margin-bottom: 12px;
     }
 
+    .select-slot-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
     .select-slot {
       width: 50px;
       height: 50px;
@@ -285,6 +310,13 @@
     .select-slot.active {
       border: 2px solid var(--accent-blue);
       background-color: #e7f5ff;
+    }
+
+    .slot-job-label {
+      font-size: 0.65rem;
+      color: #495057;
+      font-weight: bold;
+      text-align: center;
     }
 
     .job-list {
@@ -393,7 +425,7 @@
     <div id="modal-body" style="font-size:0.85rem; line-height:1.5; margin: 10px 0; text-align:center;"></div>
 
     <div class="btn-group">
-      <button class="btn" id="btn-result-restart">もう一度プレイ</button>
+      <button class="btn" id="btn-result-restart">あきらめない</button>
       <button class="btn btn-share" id="btn-share-x">𝕏 で結果をシェアする</button>
     </div>
   </div>
@@ -434,6 +466,7 @@
   const BOARD_CONFIG = { COLS: 6, ROWS: 5, TILE_SIZE: 60 };
   const TOTAL_TURNS = 20;
   const TOTAL_OPPRESSION_MAX = 2500;
+  const CITIZEN_CAP = 3; // 市民バフの上限カウント数
 
   const DROPS = {
     QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
@@ -602,7 +635,10 @@
       if (id === "citizen") baseBuffs.citizenCount++;
     });
 
-    let citizenMult = 1.0 + (baseBuffs.citizenCount * 0.15);
+    // 市民効果の上限（キャップ）を適応
+    const effectiveCitizenCount = Math.min(baseBuffs.citizenCount, CITIZEN_CAP);
+    let citizenMult = 1.0 + (effectiveCitizenCount * 0.15);
+
     return { ...baseBuffs, citizenMult };
   }
 
@@ -698,15 +734,21 @@
     let turnDamage = 0;
 
     while (true) {
-      let matches = findMatches();
-      if (matches.length === 0) break;
+      let matchGroups = findMatchGroups();
+      if (matchGroups.length === 0) break;
 
       comboCount++;
 
-      let avgX = matches.reduce((sum, m) => sum + m.c, 0) / matches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
-      let avgY = matches.reduce((sum, m) => sum + m.r, 0) / matches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
+      let allMatchedTiles = [];
+      matchGroups.forEach(group => {
+        allMatchedTiles.push(...group.tiles);
+      });
+      let uniqueMatches = allMatchedTiles.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
 
-      let matchTypes = [...new Set(matches.map(m => gameState.board[m.r][m.c].type))];
+      let avgX = uniqueMatches.reduce((sum, m) => sum + m.c, 0) / uniqueMatches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
+      let avgY = uniqueMatches.reduce((sum, m) => sum + m.r, 0) / uniqueMatches.length * BOARD_CONFIG.TILE_SIZE + BOARD_CONFIG.TILE_SIZE / 2;
+
+      let matchTypes = [...new Set(uniqueMatches.map(m => gameState.board[m.r][m.c].type))];
       let lastName = DROPS[matchTypes[0]] ? DROPS[matchTypes[0]].name : "消去";
 
       gameState.popups = [{
@@ -718,28 +760,38 @@
 
       let hasDialogueMatch = false;
 
-      matches.forEach(m => {
-        const t = gameState.board[m.r][m.c];
-        if (t.type === "DIALOGUE") {
-          let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult);
-          gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
-          hasDialogueMatch = true;
-        } else if (DROPS[t.type]) {
-          let basePower = DROPS[t.type].power;
-          let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
-          let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
-          
-          let subTotal = basePower * specMult * comboMult;
-          let finalPower = Math.floor(subTotal * buffs.citizenMult);
+      // 各グループ単位で計算（同時消し・マッチ数威力を適用）
+      matchGroups.forEach(group => {
+        const count = group.tiles.length;
+        let matchCountMult = 1.0;
+        if (count === 4) matchCountMult = 1.5;
+        if (count >= 5) matchCountMult = 2.0;
 
-          turnDamage += finalPower;
-          gameState.score += finalPower;
+        group.tiles.forEach(m => {
+          const t = gameState.board[m.r][m.c];
+          if (!t) return;
 
-          if (t.type === "VERIFY") {
-            let revealCount = 1 + buffs.reporterCount;
-            revealBlackout(revealCount);
+          if (t.type === "DIALOGUE") {
+            let healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
+            gameState.playerHp = Math.min(100, gameState.playerHp + healVal);
+            hasDialogueMatch = true;
+          } else if (DROPS[t.type]) {
+            let basePower = DROPS[t.type].power;
+            let specMult = (t.type === "VERIFY") ? buffs.verifyMult : 1.0;
+            let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
+            
+            let subTotal = basePower * specMult * comboMult * matchCountMult;
+            let finalPower = Math.floor(subTotal * buffs.citizenMult);
+
+            turnDamage += finalPower;
+            gameState.score += finalPower;
+
+            if (t.type === "VERIFY") {
+              let revealCount = 1 + buffs.reporterCount;
+              revealBlackout(revealCount);
+            }
           }
-        }
+        });
       });
 
       if (hasDialogueMatch) {
@@ -754,7 +806,7 @@
         await sleep(30);
       }
 
-      applyGravity(matches);
+      applyGravity(uniqueMatches);
       await animateDrop();
     }
 
@@ -767,24 +819,66 @@
   }
 
   function findMatches() {
+    let groups = findMatchGroups();
     let matched = [];
-    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
-      for (let c = 0; c < BOARD_CONFIG.COLS - 2; c++) {
-        let t1 = gameState.board[r][c], t2 = gameState.board[r][c+1], t3 = gameState.board[r][c+2];
-        if (!t1.blackout && !t2.blackout && !t3.blackout && t1.type === t2.type && t2.type === t3.type) {
-          matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
-        }
-      }
-    }
-    for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
-      for (let r = 0; r < BOARD_CONFIG.ROWS - 2; r++) {
-        let t1 = gameState.board[r][c], t2 = gameState.board[r+1][c], t3 = gameState.board[r+2][c];
-        if (!t1.blackout && !t2.blackout && !t3.blackout && t1.type === t2.type && t2.type === t3.type) {
-          matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
-        }
-      }
-    }
+    groups.forEach(g => matched.push(...g.tiles));
     return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
+  }
+
+  function findMatchGroups() {
+    let groups = [];
+    
+    // 横方向のマッチ判定
+    for (let r = 0; r < BOARD_CONFIG.ROWS; r++) {
+      let c = 0;
+      while (c < BOARD_CONFIG.COLS) {
+        let matchLen = 1;
+        let t1 = gameState.board[r][c];
+        if (t1 && !t1.blackout) {
+          while (c + matchLen < BOARD_CONFIG.COLS) {
+            let t2 = gameState.board[r][c + matchLen];
+            if (t2 && !t2.blackout && t1.type === t2.type) {
+              matchLen++;
+            } else {
+              break;
+            }
+          }
+        }
+        if (matchLen >= 3) {
+          let tiles = [];
+          for (let i = 0; i < matchLen; i++) tiles.push({ r, c: c + i });
+          groups.push({ type: t1.type, tiles });
+        }
+        c += Math.max(1, matchLen);
+      }
+    }
+
+    // 縦方向のマッチ判定
+    for (let c = 0; c < BOARD_CONFIG.COLS; c++) {
+      let r = 0;
+      while (r < BOARD_CONFIG.ROWS) {
+        let matchLen = 1;
+        let t1 = gameState.board[r][c];
+        if (t1 && !t1.blackout) {
+          while (r + matchLen < BOARD_CONFIG.ROWS) {
+            let t2 = gameState.board[r + matchLen][c];
+            if (t2 && !t2.blackout && t1.type === t2.type) {
+              matchLen++;
+            } else {
+              break;
+            }
+          }
+        }
+        if (matchLen >= 3) {
+          let tiles = [];
+          for (let i = 0; i < matchLen; i++) tiles.push({ r: r + i, c });
+          groups.push({ type: t1.type, tiles });
+        }
+        r += Math.max(1, matchLen);
+      }
+    }
+
+    return groups;
   }
 
   function applyGravity(matches) {
@@ -1073,7 +1167,7 @@
 
   function showSkillBanner(enemyName, skillName, desc) {
     const banner = document.getElementById("skill-banner");
-    banner.innerHTML = `${enemyName}のスキル発動！<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
+    banner.innerHTML = `${enemyName}のスキル発動<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
     banner.style.display = "block";
     setTimeout(() => {
       banner.style.display = "none";
@@ -1087,7 +1181,7 @@
     document.getElementById("result-modal").style.display = "flex";
   }
 
-function shareToX() {
+  function shareToX() {
     const { isWin, score, remTurns } = gameState.lastResult;
     const statusText = isWin ? "【クリア】健全な議論の場が取り戻されました" : "【ゲームオーバー】社会の無関心に呑み込まれました…";
     const gameUrl = "https://akmstomdtugzims.github.io/democracy/";
@@ -1097,6 +1191,7 @@ function shareToX() {
     const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(gameUrl)}`;
     window.open(tweetUrl, "_blank");
   }
+
   function openPartyModal() {
     gameState.selectedSlot = 0;
     renderPartyModalSlots();
@@ -1110,12 +1205,17 @@ function shareToX() {
     drawBoard();
   }
 
+  
   function renderPartyModalSlots() {
     const sContainer = document.getElementById("modal-slots");
     sContainer.innerHTML = "";
     gameState.party.forEach((id, idx) => {
       const job = JOBS.find(j => j.id === id);
       const icon = job ? job.icons[gameState.partyIconIndices[idx] % job.icons.length] : "❓";
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "select-slot-wrapper";
+
       const div = document.createElement("div");
       div.className = "select-slot" + (gameState.selectedSlot === idx ? " active" : "");
       div.innerText = icon;
@@ -1123,7 +1223,14 @@ function shareToX() {
         gameState.selectedSlot = idx;
         renderPartyModalSlots();
       };
-      sContainer.appendChild(div);
+
+      const label = document.createElement("div");
+      label.className = "slot-job-label";
+      label.innerText = job ? job.name : "";
+
+      wrapper.appendChild(div);
+      wrapper.appendChild(label);
+      sContainer.appendChild(wrapper);
     });
   }
 
