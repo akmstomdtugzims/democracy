@@ -6,10 +6,12 @@
   <title>Democracy</title>
   <style>
     :root {
-      --bg-color: #121218;
-      --panel-bg: #1e1e28;
-      --accent-red: #e63946;
-      --text-main: #f1f1f1;
+      --bg-color: #f8f9fa;
+      --panel-bg: #ffffff;
+      --text-main: #212529;
+      --border-color: #dee2e6;
+      --accent-red: #d90429;
+      --accent-blue: #0077b6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
@@ -24,66 +26,105 @@
     }
     #game-container {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       height: 100vh;
-      max-height: 850px;
+      max-height: 900px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       padding: 12px;
       position: relative;
     }
+    
+    /* ヘッダーエリア */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .game-title { font-size: 1.1rem; font-weight: bold; color: #333; }
+    .reset-btn {
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .reset-btn:active { background: #dee2e6; }
+
     /* 敵エリア */
     .enemy-panel {
       background: var(--panel-bg);
       border: 2px solid var(--accent-red);
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    .enemy-title { font-size: 1.2rem; font-weight: bold; color: #ff6b6b; margin-bottom: 4px; }
-    .enemy-status { font-size: 0.85rem; color: #aaa; margin-bottom: 8px; }
-    .bar-container { background: #333; height: 14px; border-radius: 7px; overflow: hidden; margin-bottom: 6px; }
+    .enemy-title { font-size: 1.1rem; font-weight: bold; color: var(--accent-red); margin-bottom: 2px; }
+    .enemy-status { font-size: 0.85rem; color: #495057; margin-bottom: 6px; }
+    .bar-container {
+      background: #e9ecef;
+      height: 18px;
+      border-radius: 9px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 4px;
+      border: 1px solid #ced4da;
+    }
     .bar-fill { height: 100%; transition: width 0.3s ease; }
     .hp-fill { background: var(--accent-red); width: 100%; }
-    .player-hp-fill { background: #2ecc71; width: 100%; }
-
-    /* 法の支配バフ表示 */
-    .rule-of-law-banner {
-      background: #2a2a3d;
-      border: 1px solid #4a4a6a;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 0.75rem;
-      color: #70a1ff;
+    .player-hp-fill { background: #2b9348; width: 100%; }
+    .bar-text {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #111;
+    }
+
+    /* 環境バフ表示 */
+    .rule-of-law-banner {
+      background: #e7f5ff;
+      border: 1px solid #a5d8ff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      color: var(--accent-blue);
+      text-align: center;
       margin-bottom: 6px;
     }
 
-    /* パーティエリア */
+    /* ステータス ＆ パーティ */
     .party-panel {
       background: var(--panel-bg);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 8px;
+      padding: 6px;
       display: flex;
       justify-content: space-around;
       align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
     }
     .party-member {
       display: flex;
       flex-direction: column;
       align-items: center;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
     }
-    .member-icon { font-size: 1.8rem; margin-bottom: 2px; }
-    .synergy-badge {
-      font-size: 0.75rem;
-      color: #f1c40f;
-      text-align: center;
+    .member-icon { font-size: 1.6rem; margin-bottom: 2px; }
+    .buff-container {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #495057;
       margin-top: 4px;
+      padding: 0 4px;
     }
 
     /* パズルキャンバス */
@@ -94,17 +135,18 @@
       align-items: center;
     }
     canvas {
-      background: #181820;
+      background: #ffffff;
+      border: 2px solid #ced4da;
       border-radius: 8px;
       touch-action: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     }
 
-    /* 敗北オーバーレイ */
-    #overlay {
+    /* 勝敗オーバーレイ */
+    .overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(10, 10, 15, 0.95);
+      background: rgba(255, 255, 255, 0.95);
       display: none;
       flex-direction: column;
       justify-content: center;
@@ -113,10 +155,10 @@
       text-align: center;
       z-index: 100;
     }
-    #overlay h2 { color: var(--accent-red); margin-bottom: 12px; font-size: 1.5rem; }
+    .overlay h2 { margin-bottom: 12px; font-size: 1.5rem; }
     .explanation-box {
-      background: #252533;
-      border-left: 4px solid var(--accent-red);
+      background: #f1f3f5;
+      border-left: 4px solid #495057;
       padding: 12px;
       text-align: left;
       font-size: 0.85rem;
@@ -124,98 +166,107 @@
       margin: 16px 0;
       border-radius: 4px;
     }
-    .continue-btn {
-      background: #e63946;
+    .btn {
+      background: #212529;
       color: #fff;
       border: none;
-      padding: 12px 24px;
-      font-size: 1rem;
+      padding: 10px 20px;
+      font-size: 0.9rem;
       font-weight: bold;
-      border-radius: 24px;
+      border-radius: 20px;
       cursor: pointer;
-      box-shadow: 0 4px 10px rgba(230, 57, 70, 0.4);
+      margin: 4px;
     }
-    .continue-btn:active { transform: scale(0.96); }
+    .btn:active { transform: scale(0.96); }
   </style>
 </head>
 <body>
 
 <div id="game-container">
-  <!-- 敵情報エリア（テキストのみ） -->
+  <!-- ヘッダー -->
+  <div class="header-bar">
+    <span class="game-title">Democracy</span>
+    <button class="reset-btn" onclick="initGame()">リセット</button>
+  </div>
+
+  <!-- 敵エリア -->
   <div class="enemy-panel">
     <div id="enemy-name" class="enemy-title">強行採決委員会</div>
-    <div class="enemy-status">敵の行動まで: あと <span id="turn-count" style="color:#f1c40f; font-weight:bold;">3</span> ターン</div>
+    <div class="enemy-status"><span id="skill-name" style="font-weight:bold;">強行採決</span>まで: あと <span id="turn-count" style="color:var(--accent-red); font-weight:bold;">3</span> ターン</div>
     <div class="bar-container">
       <div id="enemy-hp" class="bar-fill hp-fill"></div>
+      <div id="enemy-hp-text" class="bar-text">0 / 0</div>
     </div>
   </div>
 
   <!-- ステータス ＆ バフ ＆ パーティ -->
   <div>
-    <!-- 法の支配 (常時適用バフ) -->
     <div class="rule-of-law-banner">
-      <span>⚖️</span> <strong>ステージ効果【法の支配】</strong>: 基本権保証（ダメージ軽減・回復補正）
+      ⚖️ <strong>【法の支配】</strong>: 常時ダメージ20%軽減
     </div>
 
-    <div style="font-size: 0.8rem; margin-bottom: 4px; display:flex; justify-content: space-between;">
+    <div style="font-size: 0.8rem; margin-bottom: 2px; display:flex; justify-content: space-between;">
       <span>市民の気力 (HP)</span>
-      <span id="combo-display" style="color:#f1c40f; font-weight:bold;"></span>
+      <span id="combo-display" style="color:var(--accent-red); font-weight:bold;"></span>
     </div>
-    <div class="bar-container" style="height: 10px;">
+    <div class="bar-container" style="height: 14px;">
       <div id="player-hp" class="bar-fill player-hp-fill"></div>
+      <div id="player-hp-text" class="bar-text">100 / 100</div>
     </div>
+
     <div class="party-panel" id="party-container"></div>
-    <div id="synergy-display" class="synergy-badge">市民連帯バフ: +0%</div>
+    <div class="buff-container">
+      <span id="citizen-buff">市民連帯: +0%</span>
+      <span id="specialist-buff">専門家支援: なし</span>
+    </div>
   </div>
 
   <!-- パズル盤面 (6x5) -->
   <div class="canvas-container">
-    <canvas id="puzzleCanvas" width="360" height="432"></canvas>
+    <canvas id="puzzleCanvas" width="360" height="300"></canvas>
   </div>
 
-  <!-- 敗北時モーダル（コンティニューのみ） -->
-  <div id="overlay">
-    <h2>諦めの敗北</h2>
-    <p id="loss-reason">強行採決が可決され、不透明な法案が成立しました。</p>
-    <div class="explanation-box" id="explanation-text">
-      <strong>【現実の構造解説】</strong><br>
-      十分な情報開示や熟議を経ないまま、数の力で強行突破される事例は後を絶ちません。市民の無関心と諦めが権力の暴走を許す最大の要因となります。
+  <!-- 勝敗モーダル -->
+  <div id="overlay" class="overlay">
+    <h2 id="modal-title">勝利</h2>
+    <p id="modal-message"></p>
+    <div class="explanation-box" id="explanation-text"></div>
+    <div>
+      <button class="btn" id="primary-btn" onclick="retryGame()">もう一度</button>
     </div>
-    <p style="margin-bottom: 16px; font-size: 0.9rem;">「声を上げるのをやめた時、本当に終わる。」</p>
-    <button class="continue-btn" onclick="retryGame()">再度声を上げる</button>
   </div>
 </div>
 
 <script>
-  // --- ゲーム定数 ＆ 設定 ---
+  // --- 定数 ＆ 設定 ---
   const COLS = 6;
   const ROWS = 5;
   const TILE_SIZE = 60;
 
-  // ドロップ定義 (絵文字・名称) ※「法の支配」を削除し「ケア」を「対話」に変更
+  // ドロップ定義 (背景色・枠線色・絵文字・名称)
   const DROPS = {
-    RED:    { symbol: "🔍", name: "検証" },
-    BLUE:   { symbol: "📜", name: "署名" },
-    GREEN:  { symbol: "🪧", name: "デモ" },
-    YELLOW: { symbol: "📢", name: "拡散" },
-    PINK:   { symbol: "💬", name: "対話" }
+    RED:    { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証" },
+    BLUE:   { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名" },
+    GREEN:  { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ" },
+    YELLOW: { bg: "#fdffb6", border: "#ffd166", symbol: "📢", name: "拡散" },
+    PINK:   { bg: "#ffc6ff", border: "#f72585", symbol: "💬", name: "対話" }
   };
   const DROP_KEYS = Object.keys(DROPS);
 
-  // 敵の定義（テキストのみ）
+  // 敵データの強化（高HP設定）
   const ENEMIES = [
-    { name: "強行採決委員会", maxHp: 1000, turnMax: 3, atk: 35, exp: "国会審議の形骸化：十分な審議や情報検証を経ず、強行採決で法案を通してしまう構造問題。" },
-    { name: "汚職政党", maxHp: 1500, turnMax: 4, atk: 45, exp: "裏金と利権構造：不透明な資金循環や不記載問題により、政治への信頼が根底から揺らぐ構造。" },
-    { name: "世論誘導広報室", maxHp: 1200, turnMax: 3, atk: 30, exp: "スピン報道：重大な問題から目を逸らさせるため、キャッチーな話題を投下して世論をコントロールする手法。" }
+    { name: "強行採決委員会", maxHp: 3500, turnMax: 3, atk: 25, skill: "強行採決", exp: "国会審議の形骸化：十分な審議や情報検証を経ず、数の力で法案を通してしまう構造問題。" },
+    { name: "汚職政党", maxHp: 5000, turnMax: 4, atk: 35, skill: "裏金工作", exp: "裏金と利権構造：不透明な資金循環により、民主的な政治プロセスが歪められる構造。" },
+    { name: "世論誘導広報室", maxHp: 4200, turnMax: 3, atk: 20, skill: "スピン報道", exp: "スピン報道：重大な問題から目を逸らさせるため、意図的な世論コントロールを行う手法。" }
   ];
 
   // 味方キャラ定義
   const CITIZEN_ICONS = ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨", "👷‍♀️"];
   const SPECIALISTS = [
-    { name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"] },
-    { name: "記者", icons: ["🕵️", "🕵️‍♂️"] },
-    { name: "専門家", icons: ["👩‍💻", "🧑‍💻"] },
-    { name: "政治家", icons: ["👩‍💼", "🧑‍💼", "👨‍💼"] }
+    { name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], buff: "防衛力強化" },
+    { name: "記者", icons: ["🕵️", "🕵️‍♂️"], buff: "検証攻撃UP" },
+    { name: "専門家", icons: ["👩‍💻", "🧑‍💻"], buff: "コンボ倍率UP" },
+    { name: "政治家", icons: ["👩‍💼", "🧑‍💼"], buff: "気力回復UP" }
   ];
 
   // --- ゲーム状態変数 ---
@@ -228,12 +279,15 @@
   let playerHp = 100;
   let party = [];
   let citizenCount = 0;
+  let activeSpecialists = [];
 
-  // ドラッグ操作関連
   let isDragging = false;
-  let dragStart = { r: 0, c: 0 };
-  let dragPos = { x: 0, y: 0 };
   let currentTile = { r: 0, c: 0 };
+  let dragPos = { x: 0, y: 0 };
+
+  // アニメーション用変数
+  let animating = false;
+  let matchHighlights = []; // 消去用ハイライト
 
   window.onload = () => {
     canvas = document.getElementById("puzzleCanvas");
@@ -259,10 +313,11 @@
     drawBoard();
   }
 
-  // ランダムパーティ構築（市民多め）
   function setupParty() {
     party = [];
     citizenCount = 0;
+    activeSpecialists = [];
+
     for (let i = 0; i < 5; i++) {
       if (Math.random() < 0.6) {
         const icon = CITIZEN_ICONS[Math.floor(Math.random() * CITIZEN_ICONS.length)];
@@ -271,9 +326,11 @@
       } else {
         const spec = SPECIALISTS[Math.floor(Math.random() * SPECIALISTS.length)];
         const icon = spec.icons[Math.floor(Math.random() * spec.icons.length)];
-        party.push({ name: spec.name, icon: icon, isCitizen: false });
+        party.push({ name: spec.name, icon: icon, isCitizen: false, buff: spec.buff });
+        if (!activeSpecialists.includes(spec.name)) activeSpecialists.push(spec.name);
       }
     }
+
     const container = document.getElementById("party-container");
     container.innerHTML = "";
     party.forEach(m => {
@@ -282,7 +339,9 @@
       div.innerHTML = `<div class="member-icon">${m.icon}</div><div>${m.name}</div>`;
       container.appendChild(div);
     });
-    document.getElementById("synergy-display").innerText = `市民連帯バフ: +${citizenCount * 15}%`;
+
+    document.getElementById("citizen-buff").innerText = `市民連帯: +${citizenCount * 15}%`;
+    document.getElementById("specialist-buff").innerText = `専門家: ${activeSpecialists.length > 0 ? activeSpecialists.join("・") : "なし"}`;
   }
 
   function setupEnemy(idx) {
@@ -291,6 +350,7 @@
     enemyHp = currentEnemy.maxHp;
     enemyTurn = currentEnemy.turnMax;
     document.getElementById("enemy-name").innerText = currentEnemy.name;
+    document.getElementById("skill-name").innerText = currentEnemy.skill;
   }
 
   function createBoard() {
@@ -300,7 +360,7 @@
       for (let c = 0; c < COLS; c++) {
         const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
         const isBlackout = (r === 0 && (c === 2 || c === 3));
-        board[r][c] = { type: randomKey, blackout: isBlackout };
+        board[r][c] = { type: randomKey, blackout: isBlackout, yOffset: 0, scale: 1 };
       }
     }
   }
@@ -311,10 +371,11 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         if (isDragging && currentTile.r === r && currentTile.c === c) continue;
-        drawTile(r, c, board[r][c], c * TILE_SIZE, r * TILE_SIZE);
+        drawTile(r, c, board[r][c], c * TILE_SIZE, r * TILE_SIZE + (board[r][c].yOffset || 0));
       }
     }
 
+    // ドラッグ中のドロップ描画
     if (isDragging) {
       const tile = board[currentTile.r][currentTile.c];
       drawTile(currentTile.r, currentTile.c, tile, dragPos.x - TILE_SIZE/2, dragPos.y - TILE_SIZE/2, true);
@@ -323,26 +384,40 @@
 
   function drawTile(r, c, tile, x, y, isDragged = false) {
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x + TILE_SIZE/2, y + TILE_SIZE/2);
+    if (tile.scale) ctx.scale(tile.scale, tile.scale);
+    ctx.translate(-TILE_SIZE/2, -TILE_SIZE/2);
 
-    ctx.fillStyle = isDragged ? "#2a2a38" : "#20202c";
-    ctx.strokeStyle = "#333344";
-    ctx.lineWidth = 2;
-    ctx.fillRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
-    ctx.strokeRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
+    const dropData = DROPS[tile.type];
+
+    // 背景描画（高視認性カラー）
+    ctx.fillStyle = isDragged ? "#ffffff" : (dropData ? dropData.bg : "#eee");
+    ctx.strokeStyle = dropData ? dropData.border : "#ccc";
+    ctx.lineWidth = isDragged ? 3 : 2;
+
+    ctx.beginPath();
+    ctx.roundRect(3, 3, TILE_SIZE - 6, TILE_SIZE - 6, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // ハイライト表示（消去演出）
+    if (matchHighlights.some(m => m.r === r && m.c === c)) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.fillRect(3, 3, TILE_SIZE - 6, TILE_SIZE - 6);
+    }
 
     if (tile.blackout) {
-      ctx.fillStyle = "#000000";
+      ctx.fillStyle = "#333333";
       ctx.fillRect(4, 4, TILE_SIZE - 8, TILE_SIZE - 8);
       ctx.fillStyle = "#ffffff";
-      ctx.font = "12px sans-serif";
+      ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("非開示", TILE_SIZE / 2, TILE_SIZE / 2 + 4);
     } else {
-      ctx.font = "32px serif";
+      ctx.font = "30px serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(DROPS[tile.type].symbol, TILE_SIZE / 2, TILE_SIZE / 2);
+      ctx.fillText(dropData.symbol, TILE_SIZE / 2, TILE_SIZE / 2);
     }
     ctx.restore();
   }
@@ -353,12 +428,12 @@
   }
 
   function startDrag(e) {
+    if (animating) return;
     const pos = getPos(e);
     const c = Math.floor(pos.x / TILE_SIZE);
     const r = Math.floor(pos.y / TILE_SIZE);
     if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
       isDragging = true;
-      dragStart = { r, c };
       currentTile = { r, c };
       dragPos = pos;
       drawBoard();
@@ -366,7 +441,7 @@
   }
 
   function drag(e) {
-    if (!isDragging) return;
+    if (!isDragging || animating) return;
     dragPos = getPos(e);
     const c = Math.floor(dragPos.x / TILE_SIZE);
     const r = Math.floor(dragPos.y / TILE_SIZE);
@@ -389,45 +464,54 @@
     processMatches();
   }
 
-  function processMatches() {
-    let matches = findMatches();
-    if (matches.length > 0) {
-      let comboCount = 0;
-      let clearLoop = () => {
-        let currentMatches = findMatches();
-        if (currentMatches.length === 0) {
-          endTurn();
-          return;
-        }
-        comboCount++;
+  // 連鎖＆消去・落下アニメーション処理
+  async function processMatches() {
+    animating = true;
+    let comboCount = 0;
 
-        let matchTypes = [...new Set(currentMatches.map(m => board[m.r][m.c].type))];
-        let typeNames = matchTypes.map(t => DROPS[t].name).join("・");
-        document.getElementById("combo-display").innerText = `${comboCount} COMBO! (${typeNames})`;
+    while (true) {
+      let matches = findMatches();
+      if (matches.length === 0) break;
 
-        // 回復ドロップ（対話）の処理
-        if (matchTypes.includes("PINK")) {
-          playerHp = Math.min(100, playerHp + 15);
-        }
+      comboCount++;
+      matchHighlights = matches;
 
-        currentMatches.forEach(m => {
-          board[m.r][m.c].blackout = false;
-        });
+      // 該当ドロップ名の表示
+      let matchTypes = [...new Set(matches.map(m => board[m.r][m.c].type))];
+      let typeNames = matchTypes.map(t => DROPS[t].name).join("・");
+      document.getElementById("combo-display").innerText = `${comboCount} COMBO! (${typeNames})`;
 
-        const buffMultiplier = 1 + (citizenCount * 0.15);
-        let damage = Math.floor(currentMatches.length * 30 * buffMultiplier * (1 + comboCount * 0.2));
-        enemyHp = Math.max(0, enemyHp - damage);
-
-        removeAndDrop(currentMatches);
+      // 消去の強調アニメーション
+      for (let i = 0; i < 3; i++) {
+        matches.forEach(m => board[m.r][m.c].scale = (i % 2 === 0) ? 1.15 : 1.0);
         drawBoard();
-        updateUI();
+        await sleep(60);
+      }
+      matchHighlights = [];
 
-        setTimeout(clearLoop, 350);
-      };
-      clearLoop();
-    } else {
-      document.getElementById("combo-display").innerText = "";
+      // 回復
+      if (matchTypes.includes("PINK")) {
+        const healBuff = activeSpecialists.includes("政治家") ? 1.5 : 1.0;
+        playerHp = Math.min(100, playerHp + Math.floor(12 * healBuff));
+      }
+
+      // ダメージ計算
+      const buffMultiplier = 1 + (citizenCount * 0.15);
+      const specMult = activeSpecialists.includes("専門家") ? 1.3 : 1.0;
+      let damage = Math.floor(matches.length * 25 * buffMultiplier * specMult * (1 + comboCount * 0.25));
+      enemyHp = Math.max(0, enemyHp - damage);
+
+      // 非開示解除
+      matches.forEach(m => board[m.r][m.c].blackout = false);
+      updateUI();
+
+      // ドロップ消去と詰め処理
+      applyGravity(matches);
+      await animateDrop();
     }
+
+    animating = false;
+    endTurn();
   }
 
   function findMatches() {
@@ -435,49 +519,100 @@
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS - 2; c++) {
         let t1 = board[r][c].type, t2 = board[r][c+1].type, t3 = board[r][c+2].type;
-        if (t1 === t2 && t2 === t3) {
-          matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
-        }
+        if (t1 === t2 && t2 === t3) matched.push({r, c}, {r, c: c+1}, {r, c: c+2});
       }
     }
     for (let c = 0; c < COLS; c++) {
       for (let r = 0; r < ROWS - 2; r++) {
         let t1 = board[r][c].type, t2 = board[r+1][c].type, t3 = board[r+2][c].type;
-        if (t1 === t2 && t2 === t3) {
-          matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
-        }
+        if (t1 === t2 && t2 === t3) matched.push({r, c}, {r: r+1, c}, {r: r+2, c});
       }
     }
-    return matched;
+    // 重複除去
+    return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
   }
 
-  function removeAndDrop(matches) {
-    matches.forEach(m => {
-      const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
-      board[m.r][m.c] = { type: randomKey, blackout: false };
+  function applyGravity(matches) {
+    matches.forEach(m => board[m.r][m.c] = null);
+
+    for (let c = 0; c < COLS; c++) {
+      let emptySlots = 0;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][c] === null) {
+          emptySlots++;
+        } else if (emptySlots > 0) {
+          board[r + emptySlots][c] = board[r][c];
+          board[r + emptySlots][c].yOffset = -emptySlots * TILE_SIZE;
+          board[r][c] = null;
+        }
+      }
+      // 上部に新規補充
+      for (let i = 0; i < emptySlots; i++) {
+        const randomKey = DROP_KEYS[Math.floor(Math.random() * DROP_KEYS.length)];
+        board[i][c] = {
+          type: randomKey,
+          blackout: false,
+          yOffset: -emptySlots * TILE_SIZE,
+          scale: 1
+        };
+      }
+    }
+  }
+
+  // 落下アニメーション
+  function animateDrop() {
+    return new Promise(resolve => {
+      let step = 0;
+      const totalSteps = 6;
+      const interval = setInterval(() => {
+        step++;
+        let hasOffset = false;
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (board[r][c] && board[r][c].yOffset < 0) {
+              board[r][c].yOffset += TILE_SIZE / totalSteps;
+              if (board[r][c].yOffset > 0) board[r][c].yOffset = 0;
+              hasOffset = true;
+            }
+          }
+        }
+        drawBoard();
+        if (step >= totalSteps || !hasOffset) {
+          clearInterval(interval);
+          // yOffsetの初期化
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              if (board[r][c]) board[r][c].yOffset = 0;
+            }
+          }
+          drawBoard();
+          resolve();
+        }
+      }, 25);
     });
   }
 
   function endTurn() {
     document.getElementById("combo-display").innerText = "";
+
     if (enemyHp <= 0) {
-      alert("強行突破を阻止！公文書全開示に成功しました！");
-      setupEnemy((enemyIndex + 1) % ENEMIES.length);
-      updateUI();
+      showVictoryModal();
       return;
     }
 
     enemyTurn--;
     if (enemyTurn <= 0) {
-      // 「法の支配」バフによるダメージ軽減効果を計算（例: ダメージ20%カット）
-      const rawDamage = currentEnemy.atk;
-      const mitigatedDamage = Math.floor(rawDamage * 0.8);
-      playerHp = Math.max(0, playerHp - mitigatedDamage);
-      enemyTurn = currentEnemy.turnMax;
+      // ダメージ（法の支配で20%カット + 弁護士でさらに15%カット）
+      let rawDamage = currentEnemy.atk;
+      let cut = 0.8;
+      if (activeSpecialists.includes("弁護士")) cut -= 0.15;
       
+      playerHp = Math.max(0, playerHp - Math.floor(rawDamage * cut));
+      enemyTurn = currentEnemy.turnMax;
+
       if (playerHp <= 0) {
         updateUI();
-        showGameOver();
+        showGameOverModal();
         return;
       }
     }
@@ -486,20 +621,59 @@
 
   function updateUI() {
     document.getElementById("enemy-hp").style.width = `${(enemyHp / currentEnemy.maxHp) * 100}%`;
+    document.getElementById("enemy-hp-text").innerText = `${enemyHp} / ${currentEnemy.maxHp}`;
     document.getElementById("player-hp").style.width = `${playerHp}%`;
+    document.getElementById("player-hp-text").innerText = `${playerHp} / 100`;
     document.getElementById("turn-count").innerText = enemyTurn;
   }
 
-  function showGameOver() {
+  function showVictoryModal() {
+    document.getElementById("modal-title").innerText = "強行突破を阻止！";
+    document.getElementById("modal-title").style.color = "#2b9348";
+    document.getElementById("modal-message").innerText = "市民の連帯により、透明性の高い議論が行われました。";
+    document.getElementById("explanation-text").innerHTML = `
+      <strong>【達成】</strong><br>
+      継続的な検証・拡散・署名運動により、公文書の全開示と法案の見直しが実現しました。
+    `;
+    
+    const primaryBtn = document.getElementById("primary-btn");
+    if (enemyIndex < ENEMIES.length - 1) {
+      primaryBtn.innerText = "次の課題へ";
+      primaryBtn.onclick = () => {
+        document.getElementById("overlay").style.display = "none";
+        setupEnemy(enemyIndex + 1);
+        createBoard();
+        updateUI();
+        drawBoard();
+      };
+    } else {
+      primaryBtn.innerText = "最初からもう一度";
+      primaryBtn.onclick = retryGame;
+    }
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function showGameOverModal() {
+    document.getElementById("modal-title").innerText = "諦めの敗北";
+    document.getElementById("modal-title").style.color = "var(--accent-red)";
+    document.getElementById("modal-message").innerText = `${currentEnemy.name}により、不透明な政策が強行可決されました。`;
     document.getElementById("explanation-text").innerHTML = `
       <strong>【現実の構造解説：${currentEnemy.name}】</strong><br>
       ${currentEnemy.exp}
     `;
+    const primaryBtn = document.getElementById("primary-btn");
+    primaryBtn.innerText = "声を上げ直す（もう一度）";
+    primaryBtn.onclick = retryGame;
+
     document.getElementById("overlay").style.display = "flex";
   }
 
   function retryGame() {
     initGame();
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 </script>
 </body>
