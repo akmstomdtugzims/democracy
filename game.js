@@ -403,6 +403,7 @@ class DemocracyMatch {
             const finalPower = Math.floor(10 * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
+            }
           } else if (t.type === "DIALOGUE") {
             if (this.state.emergencyTurns > 0) {
               if (!dialogueInvalidatedBannerShown) {
@@ -421,7 +422,8 @@ class DemocracyMatch {
             if ((hpRestored || cleansedFake > 0 || restoredBribed) && !dialogueSkillTriggered) {
               this.showSkillBanner("公共の福祉", "気力回復 / 買収奪還 / 虚偽訂正");
               dialogueSkillTriggered = true;
-            }
+            } 
+          }
           } else if (t.type === "FAKE") {
             this.damagePlayer(DROPS.FAKE.penaltyDamage);
           } else if (t.type === "VERIFY") {
@@ -585,16 +587,6 @@ if (this.state.signatureBuffTurns > 0) {
       buffs.signatureCitizenBonus = 1; // 
       activeCitizenCount += buffs.signatureCitizenBonus;
     }
-
-    buffs.citizenCount = activeCitizenCount;
-    buffs.professionTypeCount = activeProfessions.size;
-    buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
-    if (buffs.healMult < 0.2) buffs.healMult = 0.2;
-
-    return buffs;
-  }
-
-    if (this.state.signatureBuffTurns > 0) activeCitizenCount += 1;
 
     buffs.citizenCount = activeCitizenCount;
     buffs.professionTypeCount = activeProfessions.size;
