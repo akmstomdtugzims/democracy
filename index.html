@@ -463,10 +463,11 @@
       </thead>
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / デマ解消</td></tr>
-        <tr><td>署名</td><td>📜</td><td>20 pt (市民数で強化)</td></tr>
-        <tr><td>デモ</td><td>🪧</td><td>20 pt (市民数で強化)</td></tr>
-        <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + デマ解消</td></tr>
+        <tr><td>報道</td><td>📢</td><td>10 pt</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / 嘘解消</td></tr>
+        <tr><td>署名</td><td>📜</td><td>役職者数×市民数×10 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>役職者数×市民数×10 pt</td></tr>
+        <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + 嘘解消</td></tr>
       </tbody>
     </table>
 
@@ -491,21 +492,22 @@ const CONFIG = {
 
 const DROPS = {
   QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
-  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "デマ", power: 0, penaltyDamage: 5 },
+  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "嘘",   power: 0, penaltyDamage: 5 },
+  REPORT:   { bg: "#fff3bf", border: "#fcc419", symbol: "📢", name: "報道", power: 10 },
   VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
   SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 20 },
   DEMO:     { bg: "#caffbf", border: "#52b788", symbol: "🪧", name: "デモ", power: 20 },
   DIALOGUE: { bg: "#ffc6ff", border: "#f72585", symbol: "🤝", name: "対話", heal: 12 }
 };
 
-const DROP_KEYS = ["QUESTION", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
+const DROP_KEYS = ["QUESTION", "REPORT", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 
 const JOBS = [
-  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民の連帯: 人数増加で全体効果加算（5人で過密弱体化）。「疑問」出現率UP" },
-  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "社会正義の実現: 毎ターン非開示・デマを1マス解除。「署名」出現率UP" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 周期的に全「疑問」を変化（買収時毎ターン悪化）。「デモ」出現率UP" },
-  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "公共の福祉: 「対話」効果UP（買収時DOWN）。「対話」出現率UP" },
-  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "客観性の担保: 「検証」効果UP。「検証」出現率UP" }
+  { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民の連帯: 人数増加で全体効果加算（5人で過密弱体化）。" },
+  { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "社会正義の実現: 毎ターン非開示・嘘を1マス解除。" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 5以上の同時削除で全ての「疑問」を「署名」または「デモ」に変化。" },
+  { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "公共の福祉: 「対話」効果UP。" },
+  { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "客観性の担保: 「検証」効果UP。" }
 ];
 
 class Game {
@@ -523,6 +525,7 @@ class Game {
       currentEnemyIdx: 0,
       enemyCd: 0,
       elapsedTurns: 0,
+      cabinetDecisionTurns: 0,
       party: [],
       partyIconIndices: [],
       bribedMembers: [false, false, false, false, false],
@@ -548,9 +551,9 @@ class Game {
     return [
       { 
         name: "スマホ農場", 
-        skillName: "デマ拡散", 
+        skillName: "嘘拡散", 
         cdMax: 3,
-        desc: "25ダメージ＋すべての「疑問💬」を「デマ」に変更", 
+        desc: "25ダメージ＋すべての「疑問💬」を「嘘」に変更", 
         action: () => { 
           this.damagePlayer(25); 
           let count = this.convertQuestionToFake();
@@ -561,11 +564,11 @@ class Game {
         name: "捏造報道局", 
         skillName: "スピン報道", 
         cdMax: 3,
-        desc: "25ダメージ＋盤面シャッフル＆2マス非開示化", 
+        desc: "25ダメージ＋「報道」を「嘘」と「非開示」に変化してシャッフル", 
         action: () => { 
           this.damagePlayer(25); 
+          this.convertReportToFakeAndBlackout();
           this.shuffleBoard(); 
-          this.applyBlackout(2); 
           return true;
         } 
       },
@@ -596,11 +599,23 @@ class Game {
         name: "世論誘導広報室",
         skillName: "プロパガンダ",
         cdMax: 3,
-        desc: "25ダメージ＋3×3のデママスを発生（2ターンで回復）",
+        desc: "25ダメージ＋3×3の嘘マスを発生（2ターンで回復）",
         action: () => {
           this.damagePlayer(25);
           let count = this.applyPropaganda();
           return count > 0;
+        }
+      },
+      {
+        name: "独断内閣",
+        skillName: "閣議決定",
+        cdMax: 3,
+        minTurnReq: 6,
+        desc: "25ダメージ＋「調査」「検証」の無効化（2ターン継続）",
+        action: () => {
+          this.damagePlayer(25);
+          this.state.cabinetDecisionTurns = 2;
+          return true;
         }
       }
     ];
@@ -691,6 +706,7 @@ class Game {
   getRandomDropType() {
     let weights = {
       QUESTION: 10,
+      REPORT: 10,
       VERIFY: 10,
       SIGN: 10,
       DEMO: 10,
@@ -699,11 +715,7 @@ class Game {
 
     this.state.party.forEach((id, idx) => {
       if (this.state.bribedMembers[idx]) return;
-      if (id === "citizen") weights.QUESTION += 15;
-      if (id === "lawyer") weights.SIGN += 15;
-      if (id === "reporter") weights.DEMO += 15;
-      if (id === "politician") weights.DIALOGUE += 15;
-      if (id === "expert") weights.VERIFY += 15;
+      if (id === "reporter") weights.REPORT += 15;
     });
 
     let totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -735,6 +747,7 @@ class Game {
       playerHp: CONFIG.MAX_PLAYER_HP,
       baseDecayRate: 4,
       elapsedTurns: 0,
+      cabinetDecisionTurns: 0,
       bribedMembers: [false, false, false, false, false],
       popups: []
     });
@@ -747,10 +760,18 @@ class Game {
   }
 
   setupEnemy(prevIdx) {
+    let availableEnemies = this.enemies.filter(e => {
+      if (e.minTurnReq !== undefined) {
+        return this.state.remainingTurns <= e.minTurnReq;
+      }
+      return true;
+    });
+
     let nextIdx;
     do {
-      nextIdx = Math.floor(Math.random() * this.enemies.length);
-    } while (this.enemies.length > 1 && nextIdx === prevIdx);
+      let randCandidate = availableEnemies[Math.floor(Math.random() * availableEnemies.length)];
+      nextIdx = this.enemies.indexOf(randCandidate);
+    } while (availableEnemies.length > 1 && nextIdx === prevIdx);
 
     this.state.currentEnemyIdx = nextIdx;
     this.state.enemyCd = this.enemies[nextIdx].cdMax;
@@ -765,9 +786,9 @@ class Game {
       healMult: 1.0, 
       lawyerCount: 0, 
       citizenCount: 0,
+      officerCount: 0,
       expertCount: 0,
-      demoMult: 1.0,
-      signMult: 1.0
+      signDemoPower: 0
     };
 
     this.state.party.forEach((id, idx) => {
@@ -782,20 +803,18 @@ class Game {
           buffs.verifyMult += 0.40;
           buffs.comboBonus += 0.15;
         }
-        if (id === "citizen") buffs.citizenCount++;
+        if (id === "citizen") {
+          buffs.citizenCount++;
+        } else {
+          buffs.officerCount++;
+        }
       } else {
         if (id === "politician") buffs.healMult -= 0.30;
         if (id === "reporter") buffs.bribedReporterCount++;
       }
     });
 
-    if (buffs.citizenCount === 5) {
-      buffs.demoMult = 0.5;
-      buffs.signMult = 0.5;
-    } else if (buffs.citizenCount > 0) {
-      buffs.demoMult = 1.0 + (buffs.citizenCount * 0.25);
-      buffs.signMult = 1.0 + (buffs.citizenCount * 0.25);
-    }
+    buffs.signDemoPower = buffs.officerCount * buffs.citizenCount * 10;
 
     if (buffs.healMult < 0.2) buffs.healMult = 0.2;
 
@@ -824,6 +843,7 @@ class Game {
     let turnDamage = 0;
     let dialogueSkillTriggered = false;
     let verifySkillTriggered = false;
+    let verifyInvalidatedBannerShown = false;
 
     while (true) {
       let matchGroups = this.findMatchGroups();
@@ -831,7 +851,22 @@ class Game {
 
       comboCount++;
       let allMatchedTiles = [];
-      matchGroups.forEach(group => allMatchedTiles.push(...group.tiles));
+      let maxMatchCountInTurn = 0;
+
+      matchGroups.forEach(group => {
+        if (group.tiles.length > maxMatchCountInTurn) {
+          maxMatchCountInTurn = group.tiles.length;
+        }
+        allMatchedTiles.push(...group.tiles);
+      });
+
+      if (buffs.reporterCount > 0 && maxMatchCountInTurn >= 5) {
+        let changedCount = this.convertAllQuestionsToAction();
+        if (changedCount > 0) {
+          this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ変化");
+        }
+      }
+
       let uniqueMatches = allMatchedTiles.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
 
       let avgX = uniqueMatches.reduce((sum, m) => sum + m.c, 0) / uniqueMatches.length * CONFIG.TILE_SIZE + CONFIG.TILE_SIZE / 2;
@@ -865,32 +900,44 @@ class Game {
             let restoredBribed = this.restoreBribedMember();
 
             if ((hpRestored || cleansedFake > 0 || restoredBribed) && !dialogueSkillTriggered) {
-              this.showSkillBanner("公共の福祉", "気力回復 / 買収解除 / デマ解消");
+              this.showSkillBanner("公共の福祉", "気力回復 / 買収解除 / 嘘解消");
               dialogueSkillTriggered = true;
             }
           } else if (t.type === "FAKE") {
             this.damagePlayer(DROPS.FAKE.penaltyDamage);
-          } else if (DROPS[t.type]) {
-            let basePower = DROPS[t.type].power;
-            let specMult = 1.0;
-            if (t.type === "VERIFY") specMult = buffs.verifyMult;
-            if (t.type === "DEMO") specMult = buffs.demoMult;
-            if (t.type === "SIGN") specMult = buffs.signMult;
+          } else if (t.type === "VERIFY") {
+            if (this.state.cabinetDecisionTurns > 0) {
+              if (!verifyInvalidatedBannerShown) {
+                this.showSkillBanner("閣議決定", "「検証」の効果は無効化された！");
+                verifyInvalidatedBannerShown = true;
+              }
+            } else {
+              let basePower = DROPS.VERIFY.power;
+              let specMult = buffs.verifyMult;
+              let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
+              let finalPower = Math.floor(basePower * specMult * comboMult * matchCountMult);
+              turnDamage += finalPower;
+              this.state.score += finalPower;
 
-            let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
-            
-            let finalPower = Math.floor(basePower * specMult * comboMult * matchCountMult);
-            turnDamage += finalPower;
-            this.state.score += finalPower;
-
-            if (t.type === "VERIFY") {
               let revCount = this.revealBlackout();
               let clnCount = this.cleanseFakeTiles(1);
               if ((revCount > 0 || clnCount > 0) && !verifySkillTriggered) {
-                this.showSkillBanner("客観性の担保", "非開示解除 / デマ解消");
+                this.showSkillBanner("客観性の担保", "非開示解除 / 嘘解消");
                 verifySkillTriggered = true;
               }
             }
+          } else if (t.type === "SIGN" || t.type === "DEMO") {
+            let basePower = buffs.signDemoPower;
+            let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
+            let finalPower = Math.floor(basePower * comboMult * matchCountMult);
+            turnDamage += finalPower;
+            this.state.score += finalPower;
+          } else if (DROPS[t.type]) {
+            let basePower = DROPS[t.type].power;
+            let comboMult = 1 + (comboCount - 1) * (0.15 + buffs.comboBonus);
+            let finalPower = Math.floor(basePower * comboMult * matchCountMult);
+            turnDamage += finalPower;
+            this.state.score += finalPower;
           }
         });
       });
@@ -1025,6 +1072,10 @@ class Game {
     this.state.enemyCd--;
     this.state.elapsedTurns++;
 
+    if (this.state.cabinetDecisionTurns > 0) {
+      this.state.cabinetDecisionTurns--;
+    }
+
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
         let t = this.state.board[r][c];
@@ -1049,21 +1100,14 @@ class Game {
     if (buffs.lawyerCount > 0) {
       let resolvedCount = this.resolveLawyerSkill(buffs.lawyerCount);
       if (resolvedCount > 0) {
-        this.showSkillBanner("社会正義の実現", `非開示・デマを${resolvedCount}マス解除`);
-      }
-    }
-
-    if (buffs.reporterCount > 0 && this.state.elapsedTurns % 4 === 0) {
-      let changedCount = this.convertAllQuestionsToAction();
-      if (changedCount > 0) {
-        this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ変化");
+        this.showSkillBanner("社会正義の実現", `非開示・嘘を${resolvedCount}マス解除`);
       }
     }
 
     if (buffs.bribedReporterCount > 0) {
       let corruptedCount = this.corruptQuestions(buffs.bribedReporterCount);
       if (corruptedCount > 0) {
-        this.showSkillBanner("情報操作(買収)", "「疑問💬」を「デマ」または「非開示」に悪化");
+        this.showSkillBanner("情報操作(買収)", "「疑問💬」を「嘘」または「非開示」に悪化");
       }
     }
 
@@ -1162,6 +1206,24 @@ class Game {
         let t = this.state.board[r][c];
         if (t && t.type === "QUESTION" && !t.blackout) {
           t.type = "FAKE";
+          changed++;
+        }
+      }
+    }
+    return changed;
+  }
+
+  convertReportToFakeAndBlackout() {
+    let changed = 0;
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      for (let c = 0; c < CONFIG.COLS; c++) {
+        let t = this.state.board[r][c];
+        if (t && t.type === "REPORT" && !t.blackout) {
+          if (Math.random() < 0.5) {
+            t.type = "FAKE";
+          } else {
+            t.blackout = true;
+          }
           changed++;
         }
       }
@@ -1341,7 +1403,7 @@ class Game {
         this.ctx.fillStyle = "#59359a";
         this.ctx.textAlign = "center";
         this.ctx.textBaseline = "middle";
-        this.ctx.fillText("デマ", ts / 2, ts / 2);
+        this.ctx.fillText("嘘", ts / 2, ts / 2);
       } else {
         this.ctx.font = "28px serif";
         this.ctx.textAlign = "center";
@@ -1412,13 +1474,13 @@ class Game {
   renderBuffDetails() {
     const buffs = this.calculateBuffs();
     let descLines = [];
-    if (buffs.citizenCount === 5) {
-      descLines.push(`市民連帯崩壊(過密弱体化)`);
-    } else if (buffs.citizenCount > 0) {
-      descLines.push(`署名・デモ強化`);
+    if (buffs.citizenCount > 0 && buffs.officerCount > 0) {
+      descLines.push(`署名・デモ威力 ${buffs.signDemoPower}pt`);
+    } else if (buffs.citizenCount > 0 || buffs.officerCount > 0) {
+      descLines.push(`署名・デモ威力 0pt`);
     }
-    if (buffs.lawyerCount > 0) descLines.push(`毎T非開示/デマ解除`);
-    if (buffs.reporterCount > 0) descLines.push(`4T報道の自由`);
+    if (buffs.lawyerCount > 0) descLines.push(`毎T非開示/嘘解除`);
+    if (buffs.reporterCount > 0) descLines.push(`5消しで疑問変化`);
     if (buffs.expertCount > 0) descLines.push(`検証強化/コンボ+`);
     if (buffs.healMult !== 1.0) {
       let percent = Math.round((buffs.healMult - 1) * 100);
