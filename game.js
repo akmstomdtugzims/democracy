@@ -147,15 +147,12 @@ class DemocracyMatch {
       this.state.board[start.r][start.c] = this.state.board[target.r][target.c];
       this.state.board[target.r][target.c] = temp;
 
+      this.state.remainingTurns--;
       if (this.findMatches().length > 0) {
-        // プレイヤーの移動操作が確定したタイミングでターン減算
-        this.state.remainingTurns--;
         this.processMatches();
       } else {
-        // マッチしなかった場合は移動を元に戻す
-        this.state.board[target.r][target.c] = this.state.board[start.r][start.c];
-        this.state.board[start.r][start.c] = temp;
-        this.render();
+        // 
+        this.endTurn();
       }
     };
 
@@ -271,7 +268,6 @@ class DemocracyMatch {
         if (id === "expert") {
           buffs.expertCount++;
           buffs.verifyMult += 0.40;
-          buffs.comboBonus += 0.15;
         }
       } else {
         if (id === "politician") buffs.healMult -= 0.30;
@@ -279,7 +275,6 @@ class DemocracyMatch {
       }
     });
 
-    // 署名効果（3ターン継続で市民数+1）
     if (this.state.signatureBuffTurns > 0) {
       activeCitizenCount += 1;
     }
@@ -336,7 +331,6 @@ class DemocracyMatch {
         allMatchedTiles.push(...group.tiles);
       });
 
-      // 「記者」スキル
       if (buffs.reporterCount > 0 && hasReportMatch) {
         if (this.convertQuestionsToSign() > 0) {
           this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」へ変換");
@@ -364,7 +358,11 @@ class DemocracyMatch {
           const t = this.state.board[m.r][m.c];
           if (!t) return;
 
-          if (t.type === "DIALOGUE") {
+          if (t.type === "QUESTION") {
+            const finalPower = Math.floor(10 * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
+            turnDamage += finalPower;
+            this.state.score += finalPower;
+          } else if (t.type === "DIALOGUE") {
             const prevHp = this.state.playerHp;
             const healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
             this.state.playerHp = Math.min(CONFIG.MAX_PLAYER_HP, this.state.playerHp + healVal);
@@ -390,7 +388,6 @@ class DemocracyMatch {
               turnDamage += finalPower;
               this.state.score += finalPower;
 
-              // 「専門家」スキル修正：「検証」消去時に虚偽マスを削除
               const clnCount = this.cleanseFakeTiles(CONFIG.COLS * CONFIG.ROWS);
               if (clnCount > 0 && !verifySkillTriggered) {
                 this.showSkillBanner("客観性の担保", "「虚偽」の訂正");
@@ -398,7 +395,6 @@ class DemocracyMatch {
               }
             }
           } else if (t.type === "SIGN") {
-            // 「署名」効果修正：10pt + 市民数+1（3ターン継続）
             const finalPower = Math.floor(10 * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
