@@ -465,8 +465,8 @@
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
         <tr><td>報道</td><td>📢</td><td>10 pt</td></tr>
         <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / 嘘解消</td></tr>
-        <tr><td>署名</td><td>📜</td><td>役職者数×市民数×10 pt</td></tr>
-        <tr><td>デモ</td><td>🪧</td><td>役職者数×市民数×10 pt</td></tr>
+        <tr><td>署名</td><td>📜</td><td>専門職種類数×市民数×10 pt</td></tr>
+        <tr><td>デモ</td><td>🪧</td><td>専門職種類数×市民数×10 pt</td></tr>
         <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収解除 + 嘘解消</td></tr>
       </tbody>
     </table>
@@ -505,7 +505,7 @@ const DROP_KEYS = ["QUESTION", "REPORT", "VERIFY", "SIGN", "DEMO", "DIALOGUE"];
 const JOBS = [
   { id: "citizen", name: "市民", icons: ["🧑‍💼", "👨‍💼", "👩‍🍳", "🧑‍🌾", "🧑‍🎨"], desc: "市民の連帯: 人数増加で全体効果加算（5人で過密弱体化）。" },
   { id: "lawyer", name: "弁護士", icons: ["👩‍⚖️", "👨‍⚖️"], desc: "社会正義の実現: 毎ターン非開示・嘘を1マス解除。" },
-  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 5以上の同時削除で全ての「疑問」を「署名」または「デモ」に変化。" },
+  { id: "reporter", name: "記者", icons: ["🕵️", "🕵️‍♂️"], desc: "報道の自由: 記者がパーティにいるとき「報道」の4マス以上同時削除で、すべての「疑問」を「署名」または「デモ」に一括変換。" },
   { id: "politician", name: "政治家", icons: ["👩‍💼", "👨‍💼"], desc: "公共の福祉: 「対話」効果UP。" },
   { id: "expert", name: "専門家", icons: ["👩‍💻", "🧑‍💻"], desc: "客観性の担保: 「検証」効果UP。" }
 ];
@@ -786,15 +786,24 @@ class Game {
       healMult: 1.0, 
       lawyerCount: 0, 
       citizenCount: 0,
-      officerCount: 0,
+      professionTypeCount: 0,
       expertCount: 0,
       signDemoPower: 0
     };
+
+    let activeProfessions = new Set();
+    let activeCitizenCount = 0;
 
     this.state.party.forEach((id, idx) => {
       const isBribed = this.state.bribedMembers[idx];
 
       if (!isBribed) {
+        if (id === "citizen") {
+          activeCitizenCount++;
+        } else {
+          activeProfessions.add(id);
+        }
+
         if (id === "lawyer") buffs.lawyerCount++;
         if (id === "reporter") buffs.reporterCount++;
         if (id === "politician") buffs.healMult += 0.40;
@@ -803,18 +812,15 @@ class Game {
           buffs.verifyMult += 0.40;
           buffs.comboBonus += 0.15;
         }
-        if (id === "citizen") {
-          buffs.citizenCount++;
-        } else {
-          buffs.officerCount++;
-        }
       } else {
         if (id === "politician") buffs.healMult -= 0.30;
         if (id === "reporter") buffs.bribedReporterCount++;
       }
     });
 
-    buffs.signDemoPower = buffs.officerCount * buffs.citizenCount * 10;
+    buffs.citizenCount = activeCitizenCount;
+    buffs.professionTypeCount = activeProfessions.size;
+    buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
 
     if (buffs.healMult < 0.2) buffs.healMult = 0.2;
 
@@ -851,19 +857,20 @@ class Game {
 
       comboCount++;
       let allMatchedTiles = [];
-      let maxMatchCountInTurn = 0;
+
+      let hasReportMatchFourOrMore = false;
 
       matchGroups.forEach(group => {
-        if (group.tiles.length > maxMatchCountInTurn) {
-          maxMatchCountInTurn = group.tiles.length;
+        if (group.type === "REPORT" && group.tiles.length >= 4) {
+          hasReportMatchFourOrMore = true;
         }
         allMatchedTiles.push(...group.tiles);
       });
 
-      if (buffs.reporterCount > 0 && maxMatchCountInTurn >= 5) {
+      if (buffs.reporterCount > 0 && hasReportMatchFourOrMore) {
         let changedCount = this.convertAllQuestionsToAction();
         if (changedCount > 0) {
-          this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ変化");
+          this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ一括変換");
         }
       }
 
@@ -1474,13 +1481,13 @@ class Game {
   renderBuffDetails() {
     const buffs = this.calculateBuffs();
     let descLines = [];
-    if (buffs.citizenCount > 0 && buffs.officerCount > 0) {
+    if (buffs.citizenCount > 0 && buffs.professionTypeCount > 0) {
       descLines.push(`署名・デモ威力 ${buffs.signDemoPower}pt`);
-    } else if (buffs.citizenCount > 0 || buffs.officerCount > 0) {
+    } else if (buffs.citizenCount > 0 || buffs.professionTypeCount > 0) {
       descLines.push(`署名・デモ威力 0pt`);
     }
     if (buffs.lawyerCount > 0) descLines.push(`毎T非開示/嘘解除`);
-    if (buffs.reporterCount > 0) descLines.push(`5消しで疑問変化`);
+    if (buffs.reporterCount > 0) descLines.push(`報道4消しで疑問変換`);
     if (buffs.expertCount > 0) descLines.push(`検証強化/コンボ+`);
     if (buffs.healMult !== 1.0) {
       let percent = Math.round((buffs.healMult - 1) * 100);
