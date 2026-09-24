@@ -213,8 +213,13 @@ class DemocracyMatch {
     this.render();
   }
 
-  setupEnemy(prevIdx) {
-    const available = this.enemies.filter(e => e.minTurnReq === undefined || this.state.remainingTurns <= e.minTurnReq);
+    setupEnemy(prevIdx) {
+    const available = this.enemies.filter(e => {
+      const turnOk = e.minTurnReq === undefined || this.state.remainingTurns <= e.minTurnReq;
+      const condOk = e.condition ? e.condition(this.state) : true;
+      return turnOk && condOk;
+    });
+
     let nextIdx;
     do {
       const candidate = available[Math.floor(Math.random() * available.length)];
@@ -225,6 +230,7 @@ class DemocracyMatch {
     const cdLimit = (this.state.remainingTurns <= 10 || this.state.oppressionHp < CONFIG.MAX_OPPRESSION * 0.2) ? 2 : 3;
     this.state.enemyCd = cdLimit;
   }
+
 
   // ==========================================
   // 2. ボード・ドロップ生成
