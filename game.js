@@ -79,21 +79,31 @@ class DemocracyMatch {
       },
       {
         name: "世論誘導広報室", skillName: "プロパガンダ", cdMax: 3,
-        desc: "25ダメージ＋3×3の虚偽マスを発生（2ターン）",
+        desc: "25ダメージ＋3×3の虚偽マスを発生",
         action: () => {
           this.damagePlayer(25);
           return this.applyPropaganda() > 0;
         }
       },
       {
-        name: "独断内閣", skillName: "閣議決定", cdMax: 3, minTurnReq: 6,
+        name: "独断内閣", skillName: "閣議決定", cdMax: 3, 
         desc: "25ダメージ＋「調査」「検証」の無効化（2ターン継続）",
         action: () => {
           this.damagePlayer(25);
           this.state.cabinetDecisionTurns = 2;
           return true;
         }
-      }
+     }, 
+      { 
+        name: "超法規的政権", skillName: "緊急事態宣言", cdMax: 3,
+        condition: (state) => (state.oppressionHp / CONFIG.MAX_OPPRESSION) <= 0.3,
+        desc: "30ダメージ＋「対話」「デモ」の無効化（2ターン継続）", // 
+        action: () => { 
+          this.damagePlayer(30); 
+          this.state.emergencyTurns = 2;
+          return true;
+        }
+      },
     ];
   }
 
@@ -191,6 +201,7 @@ class DemocracyMatch {
       baseDecayRate: 4,
       elapsedTurns: 0,
       cabinetDecisionTurns: 0,
+      emergencyTurns: 0,
       signatureBuffTurns: 0,
       bribedMembers: Array(5).fill(false),
       popups: []
@@ -345,6 +356,8 @@ class DemocracyMatch {
     let dialogueSkillTriggered = false;
     let verifySkillTriggered = false;
     let verifyInvalidatedBannerShown = false;
+    let dialogueInvalidatedBannerShown = false; 
+    let demoInvalidatedBannerShown = false;     
 
     while (true) {
       const matchGroups = this.findMatchGroups();
@@ -391,6 +404,12 @@ class DemocracyMatch {
             turnDamage += finalPower;
             this.state.score += finalPower;
           } else if (t.type === "DIALOGUE") {
+            if (this.state.emergencyTurns > 0) {
+              if (!dialogueInvalidatedBannerShown) {
+                this.showSkillBanner("緊急事態宣言", "「対話」の無効化");
+                dialogueInvalidatedBannerShown = true;
+              }
+            } else {
             const prevHp = this.state.playerHp;
             const healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
             this.state.playerHp = Math.min(CONFIG.MAX_PLAYER_HP, this.state.playerHp + healVal);
@@ -428,6 +447,12 @@ class DemocracyMatch {
             this.state.score += finalPower;
             this.state.signatureBuffTurns = 3;
           } else if (t.type === "DEMO") {
+            if (this.state.emergencyTurns > 0) {
+              if (!demoInvalidatedBannerShown) {
+                this.showSkillBanner("緊急事態宣言", "「デモ」の無効化");
+                demoInvalidatedBannerShown = true;
+              }
+            } else {
             const finalPower = Math.floor(buffs.signDemoPower * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
@@ -531,7 +556,8 @@ class DemocracyMatch {
       citizenCount: 0,
       professionTypeCount: 0,
       expertCount: 0,
-      signDemoPower: 0
+      signDemoPower: 0,
+      signatureCitizenBonus: 0
     };
 
     const activeProfessions = new Set();
@@ -555,6 +581,18 @@ class DemocracyMatch {
         if (id === "reporter") buffs.bribedReporterCount++;
       }
     });
+if (this.state.signatureBuffTurns > 0) {
+      buffs.signatureCitizenBonus = 1; // 
+      activeCitizenCount += buffs.signatureCitizenBonus;
+    }
+
+    buffs.citizenCount = activeCitizenCount;
+    buffs.professionTypeCount = activeProfessions.size;
+    buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
+    if (buffs.healMult < 0.2) buffs.healMult = 0.2;
+
+    return buffs;
+  }
 
     if (this.state.signatureBuffTurns > 0) activeCitizenCount += 1;
 
@@ -895,13 +933,22 @@ class DemocracyMatch {
     const buffs = this.calculateBuffs();
     const descLines = [];
 
+    if (this.state.cabinetDecisionTurns > 0) {
+      descLines.push(`閣議決定中:検証無効(${this.state.cabinetDecisionTurns}T)`);
+    }
+    if (this.state.emergencyTurns > 0) {
+      descLines.push(`緊急事態宣言中:対話・デモ無効(${this.state.emergencyTurns}T)`);
+    }
+
     if (buffs.citizenCount > 0 && buffs.professionTypeCount > 0) {
       descLines.push(`署名&デモ威力 ${buffs.signDemoPower}pt`);
     } else if (buffs.citizenCount > 0 || buffs.professionTypeCount > 0) {
       descLines.push(`署名&デモ威力 0pt`);
     }
 
-    if (this.state.signatureBuffTurns > 0) descLines.push(`署名効果:市民数+1(${this.state.signatureBuffTurns}T)`);
+   if (this.state.signatureBuffTurns > 0) {
+      descLines.push(`署名効果:市民+${buffs.signatureCitizenBonus}人(${this.state.signatureBuffTurns}T)`);
+    }
     if (buffs.lawyerCount > 0) descLines.push(`毎T開示&虚偽訂正`);
     if (buffs.reporterCount > 0) descLines.push(`報道で疑問を署名化`);
     if (buffs.expertCount > 0) descLines.push(`検証強化`);
