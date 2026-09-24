@@ -14,6 +14,7 @@ class DemocracyMatch {
       enemyCd: 0,
       elapsedTurns: 0,
       cabinetDecisionTurns: 0,
+      signatureBuffTurns: 0,
       party: [],
       partyIconIndices: [],
       bribedMembers: Array(5).fill(false),
@@ -47,10 +48,9 @@ class DemocracyMatch {
       },
       { 
         name: "捏造報道局", skillName: "スピン報道", cdMax: 3,
-        desc: "25ダメージ＋「報道」を「虚偽」と「非開示」に変化してシャッフル", 
+        desc: "25ダメージ＋シャッフル", 
         action: () => { 
           this.damagePlayer(25); 
-          this.convertReportToFakeAndBlackout();
           this.shuffleBoard(); 
           return true;
         } 
@@ -64,7 +64,7 @@ class DemocracyMatch {
         } 
       },
       { 
-        name: "懐柔工作財団", skillName: "買収", cdMax: 3,
+        name: "懐柔工作団", skillName: "買収", cdMax: 3,
         desc: "25ダメージ＋パーティ2名を買収(無効化)", 
         action: () => { 
           this.damagePlayer(25); 
@@ -75,7 +75,7 @@ class DemocracyMatch {
       },
       {
         name: "世論誘導広報室", skillName: "プロパガンダ", cdMax: 3,
-        desc: "25ダメージ＋3×3の虚偽マスを発生（2ターンで回復）",
+        desc: "25ダメージ＋3×3の虚偽マスを発生（2ターン）",
         action: () => {
           this.damagePlayer(25);
           return this.applyPropaganda() > 0;
@@ -148,8 +148,13 @@ class DemocracyMatch {
       this.state.board[target.r][target.c] = temp;
 
       if (this.findMatches().length > 0) {
+        // プレイヤーの移動操作が確定したタイミングでターン減算
+        this.state.remainingTurns--;
         this.processMatches();
       } else {
+        // マッチしなかった場合は移動を元に戻す
+        this.state.board[target.r][target.c] = this.state.board[start.r][start.c];
+        this.state.board[start.r][start.c] = temp;
         this.render();
       }
     };
@@ -212,6 +217,7 @@ class DemocracyMatch {
       baseDecayRate: 4,
       elapsedTurns: 0,
       cabinetDecisionTurns: 0,
+      signatureBuffTurns: 0,
       bribedMembers: Array(5).fill(false),
       popups: []
     });
@@ -273,6 +279,11 @@ class DemocracyMatch {
       }
     });
 
+    // 署名効果（3ターン継続で市民数+1）
+    if (this.state.signatureBuffTurns > 0) {
+      activeCitizenCount += 1;
+    }
+
     buffs.citizenCount = activeCitizenCount;
     buffs.professionTypeCount = activeProfessions.size;
     buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
@@ -316,18 +327,19 @@ class DemocracyMatch {
 
       comboCount++;
       const allMatchedTiles = [];
-      let hasReportMatchFourOrMore = false;
+      let hasReportMatch = false;
 
       matchGroups.forEach(group => {
-        if (group.type === "REPORT" && group.tiles.length >= 4) {
-          hasReportMatchFourOrMore = true;
+        if (group.type === "REPORT") {
+          hasReportMatch = true;
         }
         allMatchedTiles.push(...group.tiles);
       });
 
-      if (buffs.reporterCount > 0 && hasReportMatchFourOrMore) {
-        if (this.convertAllQuestionsToAction() > 0) {
-          this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」「デモ🪧」へ一括変換");
+      // 「記者」スキル
+      if (buffs.reporterCount > 0 && hasReportMatch) {
+        if (this.convertQuestionsToSign() > 0) {
+          this.showSkillBanner("報道の自由", "すべての「疑問💬」を「署名📜」へ変換");
         }
       }
 
@@ -370,7 +382,7 @@ class DemocracyMatch {
           } else if (t.type === "VERIFY") {
             if (this.state.cabinetDecisionTurns > 0) {
               if (!verifyInvalidatedBannerShown) {
-                this.showSkillBanner("閣議決定", "「検証」の効果は無効化された！");
+                this.showSkillBanner("閣議決定", "「検証」の無効化");
                 verifyInvalidatedBannerShown = true;
               }
             } else {
@@ -378,14 +390,20 @@ class DemocracyMatch {
               turnDamage += finalPower;
               this.state.score += finalPower;
 
-              const revCount = this.revealBlackout();
-              const clnCount = this.cleanseFakeTiles(1);
-              if ((revCount > 0 || clnCount > 0) && !verifySkillTriggered) {
-                this.showSkillBanner("客観性の担保", "非開示解除 / 虚偽訂正");
+              // 「専門家」スキル修正：「検証」消去時に虚偽マスを削除
+              const clnCount = this.cleanseFakeTiles(CONFIG.COLS * CONFIG.ROWS);
+              if (clnCount > 0 && !verifySkillTriggered) {
+                this.showSkillBanner("客観性の担保", "「虚偽」の訂正");
                 verifySkillTriggered = true;
               }
             }
-          } else if (t.type === "SIGN" || t.type === "DEMO") {
+          } else if (t.type === "SIGN") {
+            // 「署名」効果修正：10pt + 市民数+1（3ターン継続）
+            const finalPower = Math.floor(10 * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
+            turnDamage += finalPower;
+            this.state.score += finalPower;
+            this.state.signatureBuffTurns = 3;
+          } else if (t.type === "DEMO") {
             const finalPower = Math.floor(buffs.signDemoPower * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
@@ -530,12 +548,15 @@ class DemocracyMatch {
   }
 
   endTurn() {
-    this.state.remainingTurns--;
     this.state.enemyCd--;
     this.state.elapsedTurns++;
 
     if (this.state.cabinetDecisionTurns > 0) {
       this.state.cabinetDecisionTurns--;
+    }
+
+    if (this.state.signatureBuffTurns > 0) {
+      this.state.signatureBuffTurns--;
     }
 
     for (let r = 0; r < CONFIG.ROWS; r++) {
@@ -609,7 +630,7 @@ class DemocracyMatch {
     return limit;
   }
 
-  convertAllQuestionsToAction() {
+  convertQuestionsToSign() {
     const questions = [];
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
@@ -617,7 +638,7 @@ class DemocracyMatch {
         if (t && t.type === "QUESTION" && !t.blackout) questions.push(t);
       }
     }
-    questions.forEach(t => t.type = Math.random() < 0.5 ? "SIGN" : "DEMO");
+    questions.forEach(t => t.type = "SIGN");
     return questions.length;
   }
 
@@ -654,21 +675,6 @@ class DemocracyMatch {
     return changed;
   }
 
-  convertReportToFakeAndBlackout() {
-    let changed = 0;
-    for (let r = 0; r < CONFIG.ROWS; r++) {
-      for (let c = 0; c < CONFIG.COLS; c++) {
-        const t = this.state.board[r][c];
-        if (t && t.type === "REPORT" && !t.blackout) {
-          if (Math.random() < 0.5) t.type = "FAKE";
-          else t.blackout = true;
-          changed++;
-        }
-      }
-    }
-    return changed;
-  }
-
   cleanseFakeTiles(count) {
     const fakes = [];
     for (let r = 0; r < CONFIG.ROWS; r++) {
@@ -679,7 +685,7 @@ class DemocracyMatch {
     }
     const limit = Math.min(count, fakes.length);
     for (let i = 0; i < limit; i++) {
-      fakes[i].type = "QUESTION";
+      fakes[i].type = this.getRandomDropType();
     }
     return limit;
   }
@@ -905,14 +911,15 @@ class DemocracyMatch {
     const descLines = [];
 
     if (buffs.citizenCount > 0 && buffs.professionTypeCount > 0) {
-      descLines.push(`署名・デモ威力 ${buffs.signDemoPower}pt`);
+      descLines.push(`署名&デモ威力 ${buffs.signDemoPower}pt`);
     } else if (buffs.citizenCount > 0 || buffs.professionTypeCount > 0) {
-      descLines.push(`署名・デモ威力 0pt`);
+      descLines.push(`署名&デモ威力 0pt`);
     }
 
-    if (buffs.lawyerCount > 0) descLines.push(`毎T非開示/虚偽解除`);
-    if (buffs.reporterCount > 0) descLines.push(`報道4消しで疑問変換`);
-    if (buffs.expertCount > 0) descLines.push(`検証強化/コンボ+`);
+    if (this.state.signatureBuffTurns > 0) descLines.push(`署名効果:市民数+1(${this.state.signatureBuffTurns}T)`);
+    if (buffs.lawyerCount > 0) descLines.push(`毎T開示&虚偽訂正`);
+    if (buffs.reporterCount > 0) descLines.push(`報道で疑問を署名化`);
+    if (buffs.expertCount > 0) descLines.push(`検証強化`);
     if (buffs.healMult !== 1.0) {
       const percent = Math.round((buffs.healMult - 1) * 100);
       descLines.push(`回復${percent >= 0 ? '+' : ''}${percent}%`);
