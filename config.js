@@ -9,7 +9,7 @@ const CONFIG = {
 
 const DROPS = {
   QUESTION: { bg: "#ffeb3b", border: "#fbc02d", symbol: "💬", name: "疑問", power: 10 },
-  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "虚偽", power: 0, penaltyDamage: 10 },
+  FAKE:     { bg: "#e0cffc", border: "#7952b3", symbol: "",   name: "虚偽", power: 0, penaltyDamage: 3 },
   REPORT:   { bg: "#fff3bf", border: "#fcc419", symbol: "📢", name: "報道", power: 10 },
   VERIFY:   { bg: "#ffadad", border: "#ff6b6b", symbol: "🔍", name: "検証", power: 15 },
   SIGN:     { bg: "#a0c4ff", border: "#4cc9f0", symbol: "📜", name: "署名", power: 10 },
