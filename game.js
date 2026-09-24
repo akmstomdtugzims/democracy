@@ -1,6 +1,7 @@
 class DemocracyMatch {
   constructor() {
-    this.canvas = document.getElementById("puzzleCanvas");
+    this.$ = (id) => document.getElementById(id);
+    this.canvas = this.$("puzzleCanvas");
     this.ctx = this.canvas.getContext("2d");
 
     this.state = {
@@ -36,6 +37,9 @@ class DemocracyMatch {
     this.resetGame();
   }
 
+  // ==========================================
+  // 1. 初期化・イベント管理
+  // ==========================================
   initEnemies() {
     return [
       { 
@@ -96,7 +100,9 @@ class DemocracyMatch {
   bindEvents() {
     const getPos = (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
     };
 
     const handleStart = (pos) => {
@@ -151,7 +157,6 @@ class DemocracyMatch {
       if (this.findMatches().length > 0) {
         this.processMatches();
       } else {
-        // 
         this.endTurn();
       }
     };
@@ -160,52 +165,24 @@ class DemocracyMatch {
     this.canvas.addEventListener("mousemove", (e) => handleMove(getPos(e)));
     this.canvas.addEventListener("mouseup", handleEnd);
 
-    this.canvas.addEventListener("touchstart", (e) => handleStart(getPos(e.touches[0])), { passive: true });
-    this.canvas.addEventListener("touchmove", (e) => handleMove(getPos(e.touches[0])), { passive: true });
+    this.canvas.addEventListener("touchstart", (e) => handleStart(getPos(e)), { passive: true });
+    this.canvas.addEventListener("touchmove", (e) => handleMove(getPos(e)), { passive: true });
     this.canvas.addEventListener("touchend", handleEnd);
 
-    document.getElementById("btn-party-open").onclick = () => this.openPartyModal();
-    document.getElementById("btn-party-close").onclick = () => this.closePartyModal();
-    document.getElementById("btn-party-random").onclick = () => {
+    this.$("btn-party-open").onclick = () => this.openPartyModal();
+    this.$("btn-party-close").onclick = () => this.closePartyModal();
+    this.$("btn-party-random").onclick = () => {
       this.randomizeParty();
       this.renderPartyModalSlots();
     };
-    document.getElementById("btn-reset").onclick = () => this.resetGame();
-    document.getElementById("btn-result-restart").onclick = () => this.resetGame();
-    document.getElementById("btn-share-x").onclick = () => this.shareToX();
-    document.getElementById("btn-share-other").onclick = () => this.shareOther();
-  }
-
-  getRandomDropType() {
-    const weights = { QUESTION: 10, REPORT: 10, VERIFY: 10, SIGN: 10, DEMO: 10, DIALOGUE: 10 };
-
-    this.state.party.forEach((id, idx) => {
-      if (!this.state.bribedMembers[idx] && id === "reporter") {
-        weights.REPORT += 15;
-      }
-    });
-
-    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-    let rand = Math.random() * totalWeight;
-    for (const key in weights) {
-      if (rand <= weights[key]) return key;
-      rand -= weights[key];
-    }
-    return "QUESTION";
-  }
-
-  randomizeParty() {
-    this.state.party = [];
-    this.state.partyIconIndices = [];
-    for (let i = 0; i < 5; i++) {
-      const randJob = JOBS[Math.floor(Math.random() * JOBS.length)];
-      this.state.party.push(randJob.id);
-      this.state.partyIconIndices.push(Math.floor(Math.random() * randJob.icons.length));
-    }
+    this.$("btn-reset").onclick = () => this.resetGame();
+    this.$("btn-result-restart").onclick = () => this.resetGame();
+    this.$("btn-share-x").onclick = () => this.shareToX();
+    this.$("btn-share-other").onclick = () => this.shareOther();
   }
 
   resetGame() {
-    document.getElementById("result-modal").style.display = "none";
+    this.$("result-modal").style.display = "none";
     Object.assign(this.state, {
       remainingTurns: CONFIG.MAX_TURNS,
       score: 0,
@@ -234,57 +211,39 @@ class DemocracyMatch {
     } while (available.length > 1 && nextIdx === prevIdx);
 
     this.state.currentEnemyIdx = nextIdx;
-    
     const cdLimit = (this.state.remainingTurns <= 10 || this.state.oppressionHp < CONFIG.MAX_OPPRESSION * 0.2) ? 2 : 3;
     this.state.enemyCd = cdLimit;
   }
 
-  calculateBuffs() {
-    const buffs = { 
-      verifyMult: 1.0, 
-      reporterCount: 0, 
-      bribedReporterCount: 0,
-      comboBonus: 0.0, 
-      healMult: 1.0, 
-      lawyerCount: 0, 
-      citizenCount: 0,
-      professionTypeCount: 0,
-      expertCount: 0,
-      signDemoPower: 0
-    };
-
-    const activeProfessions = new Set();
-    let activeCitizenCount = 0;
+  // ==========================================
+  // 2. ボード・ドロップ生成
+  // ==========================================
+  getRandomDropType() {
+    const weights = { QUESTION: 10, REPORT: 10, VERIFY: 10, SIGN: 10, DEMO: 10, DIALOGUE: 10 };
 
     this.state.party.forEach((id, idx) => {
-      const isBribed = this.state.bribedMembers[idx];
-      if (!isBribed) {
-        if (id === "citizen") activeCitizenCount++;
-        else activeProfessions.add(id);
-
-        if (id === "lawyer") buffs.lawyerCount++;
-        if (id === "reporter") buffs.reporterCount++;
-        if (id === "politician") buffs.healMult += 0.40;
-        if (id === "expert") {
-          buffs.expertCount++;
-          buffs.verifyMult += 0.40;
-        }
-      } else {
-        if (id === "politician") buffs.healMult -= 0.30;
-        if (id === "reporter") buffs.bribedReporterCount++;
+      if (!this.state.bribedMembers[idx] && id === "reporter") {
+        weights.REPORT += 15;
       }
     });
 
-    if (this.state.signatureBuffTurns > 0) {
-      activeCitizenCount += 1;
+    const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+    let rand = Math.random() * totalWeight;
+    for (const key in weights) {
+      if (rand <= weights[key]) return key;
+      rand -= weights[key];
     }
+    return "QUESTION";
+  }
 
-    buffs.citizenCount = activeCitizenCount;
-    buffs.professionTypeCount = activeProfessions.size;
-    buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
-    if (buffs.healMult < 0.2) buffs.healMult = 0.2;
-
-    return buffs;
+  randomizeParty() {
+    this.state.party = [];
+    this.state.partyIconIndices = [];
+    for (let i = 0; i < 5; i++) {
+      const randJob = JOBS[Math.floor(Math.random() * JOBS.length)];
+      this.state.party.push(randJob.id);
+      this.state.partyIconIndices.push(Math.floor(Math.random() * randJob.icons.length));
+    }
   }
 
   createBoard() {
@@ -307,6 +266,77 @@ class DemocracyMatch {
     }
   }
 
+  shuffleBoard() {
+    let isValid = false;
+    while (!isValid) {
+      for (let r = 0; r < CONFIG.ROWS; r++) {
+        for (let c = 0; c < CONFIG.COLS; c++) {
+          this.state.board[r][c].type = this.getRandomDropType();
+        }
+      }
+      if (this.findMatches().length === 0) isValid = true;
+    }
+  }
+
+  // ==========================================
+  // 3. マッチ判定・アニメーション
+  // ==========================================
+  findMatches() {
+    const groups = this.findMatchGroups();
+    const matched = [];
+    groups.forEach(g => matched.push(...g.tiles));
+    return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
+  }
+
+  findMatchGroups() {
+    const groups = [];
+
+    // 横方向の判定
+    for (let r = 0; r < CONFIG.ROWS; r++) {
+      let c = 0;
+      while (c < CONFIG.COLS) {
+        let matchLen = 1;
+        const t1 = this.state.board[r][c];
+        if (t1 && !t1.blackout) {
+          while (c + matchLen < CONFIG.COLS) {
+            const t2 = this.state.board[r][c + matchLen];
+            if (t2 && !t2.blackout && t1.type === t2.type) matchLen++;
+            else break;
+          }
+        }
+        if (matchLen >= 3) {
+          const tiles = [];
+          for (let i = 0; i < matchLen; i++) tiles.push({ r, c: c + i });
+          groups.push({ type: t1.type, tiles });
+        }
+        c += Math.max(1, matchLen);
+      }
+    }
+
+    // 縦方向の判定
+    for (let c = 0; c < CONFIG.COLS; c++) {
+      let r = 0;
+      while (r < CONFIG.ROWS) {
+        let matchLen = 1;
+        const t1 = this.state.board[r][c];
+        if (t1 && !t1.blackout) {
+          while (r + matchLen < CONFIG.ROWS) {
+            const t2 = this.state.board[r + matchLen][c];
+            if (t2 && !t2.blackout && t1.type === t2.type) matchLen++;
+            else break;
+          }
+        }
+        if (matchLen >= 3) {
+          const tiles = [];
+          for (let i = 0; i < matchLen; i++) tiles.push({ r: r + i, c });
+          groups.push({ type: t1.type, tiles });
+        }
+        r += Math.max(1, matchLen);
+      }
+    }
+    return groups;
+  }
+
   async processMatches() {
     this.state.animating = true;
     let comboCount = 0;
@@ -325,9 +355,7 @@ class DemocracyMatch {
       let hasReportMatch = false;
 
       matchGroups.forEach(group => {
-        if (group.type === "REPORT") {
-          hasReportMatch = true;
-        }
+        if (group.type === "REPORT") hasReportMatch = true;
         allMatchedTiles.push(...group.tiles);
       });
 
@@ -427,64 +455,6 @@ class DemocracyMatch {
     this.endTurn();
   }
 
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  findMatches() {
-    const groups = this.findMatchGroups();
-    const matched = [];
-    groups.forEach(g => matched.push(...g.tiles));
-    return matched.filter((v, i, a) => a.findIndex(t => t.r === v.r && t.c === v.c) === i);
-  }
-
-  findMatchGroups() {
-    const groups = [];
-
-    for (let r = 0; r < CONFIG.ROWS; r++) {
-      let c = 0;
-      while (c < CONFIG.COLS) {
-        let matchLen = 1;
-        const t1 = this.state.board[r][c];
-        if (t1 && !t1.blackout) {
-          while (c + matchLen < CONFIG.COLS) {
-            const t2 = this.state.board[r][c + matchLen];
-            if (t2 && !t2.blackout && t1.type === t2.type) matchLen++;
-            else break;
-          }
-        }
-        if (matchLen >= 3) {
-          const tiles = [];
-          for (let i = 0; i < matchLen; i++) tiles.push({ r, c: c + i });
-          groups.push({ type: t1.type, tiles });
-        }
-        c += Math.max(1, matchLen);
-      }
-    }
-
-    for (let c = 0; c < CONFIG.COLS; c++) {
-      let r = 0;
-      while (r < CONFIG.ROWS) {
-        let matchLen = 1;
-        const t1 = this.state.board[r][c];
-        if (t1 && !t1.blackout) {
-          while (r + matchLen < CONFIG.ROWS) {
-            const t2 = this.state.board[r + matchLen][c];
-            if (t2 && !t2.blackout && t1.type === t2.type) matchLen++;
-            else break;
-          }
-        }
-        if (matchLen >= 3) {
-          const tiles = [];
-          for (let i = 0; i < matchLen; i++) tiles.push({ r: r + i, c });
-          groups.push({ type: t1.type, tiles });
-        }
-        r += Math.max(1, matchLen);
-      }
-    }
-    return groups;
-  }
-
   applyGravity(matches) {
     matches.forEach(m => this.state.board[m.r][m.c] = null);
 
@@ -543,17 +513,65 @@ class DemocracyMatch {
     });
   }
 
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ==========================================
+  // 4. ターン進行・バフ・スキル処理
+  // ==========================================
+  calculateBuffs() {
+    const buffs = { 
+      verifyMult: 1.0, 
+      reporterCount: 0, 
+      bribedReporterCount: 0,
+      comboBonus: 0.0, 
+      healMult: 1.0, 
+      lawyerCount: 0, 
+      citizenCount: 0,
+      professionTypeCount: 0,
+      expertCount: 0,
+      signDemoPower: 0
+    };
+
+    const activeProfessions = new Set();
+    let activeCitizenCount = 0;
+
+    this.state.party.forEach((id, idx) => {
+      const isBribed = this.state.bribedMembers[idx];
+      if (!isBribed) {
+        if (id === "citizen") activeCitizenCount++;
+        else activeProfessions.add(id);
+
+        if (id === "lawyer") buffs.lawyerCount++;
+        if (id === "reporter") buffs.reporterCount++;
+        if (id === "politician") buffs.healMult += 0.40;
+        if (id === "expert") {
+          buffs.expertCount++;
+          buffs.verifyMult += 0.40;
+        }
+      } else {
+        if (id === "politician") buffs.healMult -= 0.30;
+        if (id === "reporter") buffs.bribedReporterCount++;
+      }
+    });
+
+    if (this.state.signatureBuffTurns > 0) activeCitizenCount += 1;
+
+    buffs.citizenCount = activeCitizenCount;
+    buffs.professionTypeCount = activeProfessions.size;
+    buffs.signDemoPower = buffs.professionTypeCount * buffs.citizenCount * 10;
+    if (buffs.healMult < 0.2) buffs.healMult = 0.2;
+
+    return buffs;
+  }
+
   endTurn() {
     this.state.enemyCd--;
     this.state.elapsedTurns++;
 
-    if (this.state.cabinetDecisionTurns > 0) {
-      this.state.cabinetDecisionTurns--;
-    }
-
-    if (this.state.signatureBuffTurns > 0) {
-      this.state.signatureBuffTurns--;
-    }
+    if (this.state.cabinetDecisionTurns > 0) this.state.cabinetDecisionTurns--;
+    if (this.state.signatureBuffTurns > 0) this.state.signatureBuffTurns--;
 
     for (let r = 0; r < CONFIG.ROWS; r++) {
       for (let c = 0; c < CONFIG.COLS; c++) {
@@ -569,7 +587,6 @@ class DemocracyMatch {
     }
 
     this.damagePlayer(this.state.baseDecayRate);
-
     const buffs = this.calculateBuffs();
 
     if (buffs.lawyerCount > 0) {
@@ -686,25 +703,6 @@ class DemocracyMatch {
     return limit;
   }
 
-  revealBlackout() {
-    const blackouts = [];
-    for (let r = 0; r < CONFIG.ROWS; r++) {
-      for (let c = 0; c < CONFIG.COLS; c++) {
-        if (this.state.board[r][c].blackout) blackouts.push(this.state.board[r][c]);
-      }
-    }
-    if (blackouts.length === 0) return 0;
-
-    const minCount = Math.min(2, blackouts.length);
-    const count = Math.floor(Math.random() * (blackouts.length - minCount + 1)) + minCount;
-    blackouts.sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < count; i++) {
-      blackouts[i].blackout = false;
-    }
-    return count;
-  }
-
   applyBlackout(count) {
     const targets = [];
     for (let r = 0; r < CONFIG.ROWS; r++) {
@@ -771,18 +769,9 @@ class DemocracyMatch {
     return false;
   }
 
-  shuffleBoard() {
-    let isValid = false;
-    while (!isValid) {
-      for (let r = 0; r < CONFIG.ROWS; r++) {
-        for (let c = 0; c < CONFIG.COLS; c++) {
-          this.state.board[r][c].type = this.getRandomDropType();
-        }
-      }
-      if (this.findMatches().length === 0) isValid = true;
-    }
-  }
-
+  // ==========================================
+  // 5. 描画・UI更新
+  // ==========================================
   render() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     const { isDragging, startTile, dragPos } = this.state.dragState;
@@ -873,24 +862,24 @@ class DemocracyMatch {
   }
 
   updateUI() {
-    document.getElementById("rem-turns").innerText = this.state.remainingTurns;
-    document.getElementById("score-display").innerText = this.state.score;
-    document.getElementById("player-hp").style.width = `${this.state.playerHp}%`;
-    document.getElementById("player-hp-text").innerText = `気力 ${this.state.playerHp} / ${CONFIG.MAX_PLAYER_HP}`;
+    this.$("rem-turns").innerText = this.state.remainingTurns;
+    this.$("score-display").innerText = this.state.score;
+    this.$("player-hp").style.width = `${this.state.playerHp}%`;
+    this.$("player-hp-text").innerText = `気力 ${this.state.playerHp} / ${CONFIG.MAX_PLAYER_HP}`;
 
     const currentEnemy = this.enemies[this.state.currentEnemyIdx];
-    document.getElementById("enemy-turn-info").innerHTML = 
+    this.$("enemy-turn-info").innerHTML = 
       `${this.state.enemyCd}ターン後 ${currentEnemy.name}【<strong>${currentEnemy.skillName}</strong>】<br><span style="font-size:0.7rem; color:#666;">（${currentEnemy.desc}）</span>`;
     
-    document.getElementById("oppression-hp").style.width = `${(this.state.oppressionHp / CONFIG.MAX_OPPRESSION) * 100}%`;
-    document.getElementById("oppression-hp-text").innerText = `抑圧度 ${this.state.oppressionHp} / ${CONFIG.MAX_OPPRESSION}`;
+    this.$("oppression-hp").style.width = `${(this.state.oppressionHp / CONFIG.MAX_OPPRESSION) * 100}%`;
+    this.$("oppression-hp-text").innerText = `抑圧度 ${this.state.oppressionHp} / ${CONFIG.MAX_OPPRESSION}`;
 
     this.renderPartyDisplay();
     this.renderBuffDetails();
   }
 
   renderPartyDisplay() {
-    const container = document.getElementById("party-display");
+    const container = this.$("party-display");
     container.innerHTML = "";
     this.state.party.forEach((id, idx) => {
       const job = JOBS.find(j => j.id === id);
@@ -921,11 +910,11 @@ class DemocracyMatch {
       descLines.push(`回復${percent >= 0 ? '+' : ''}${percent}%`);
     }
 
-    document.getElementById("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
+    this.$("buff-detail-text").innerText = "効果: " + (descLines.length > 0 ? descLines.join(" / ") : "なし（基礎状態）");
   }
 
   showSkillBanner(skillName, desc) {
-    const banner = document.getElementById("skill-banner");
+    const banner = this.$("skill-banner");
     banner.innerHTML = `スキル発動<br>【${skillName}】<span class="skill-effect-text">${desc}</span>`;
     banner.style.display = "block";
     setTimeout(() => { banner.style.display = "none"; }, 1200);
@@ -933,13 +922,16 @@ class DemocracyMatch {
 
   showResultModal(isWin, message) {
     this.state.lastResult = { isWin, score: this.state.score, remTurns: this.state.remainingTurns };
-    document.getElementById("modal-title").innerText = isWin ? "クリア" : "ゲームオーバー";
-    document.getElementById("modal-body").innerHTML = `${message}<br><br>スコア: <strong>${this.state.score}</strong> pt<br>残りターン: <strong>${this.state.remainingTurns}</strong>`;
+    this.$("modal-title").innerText = isWin ? "クリア" : "ゲームオーバー";
+    this.$("modal-body").innerHTML = `${message}<br><br>スコア: <strong>${this.state.score}</strong> pt<br>残りターン: <strong>${this.state.remainingTurns}</strong>`;
     
-    document.getElementById("btn-result-restart").innerText = isWin ? "もう一度プレイ" : "あきらめない";
-    document.getElementById("result-modal").style.display = "flex";
+    this.$("btn-result-restart").innerText = isWin ? "もう一度プレイ" : "あきらめない";
+    this.$("result-modal").style.display = "flex";
   }
 
+  // ==========================================
+  // 6. モーダル・SNS共有
+  // ==========================================
   getShareText() {
     const { isWin, score, remTurns } = this.state.lastResult;
     const statusText = isWin ? "【クリア】健全な議論の場が取り戻されました" : "【ゲームオーバー】社会の無関心に呑み込まれました…";
@@ -974,17 +966,17 @@ class DemocracyMatch {
     this.state.selectedSlot = 0;
     this.renderPartyModalSlots();
     this.renderPartyModalJobList();
-    document.getElementById("party-modal").style.display = "flex";
+    this.$("party-modal").style.display = "flex";
   }
 
   closePartyModal() {
-    document.getElementById("party-modal").style.display = "none";
+    this.$("party-modal").style.display = "none";
     this.updateUI();
     this.render();
   }
 
   renderPartyModalSlots() {
-    const container = document.getElementById("modal-slots");
+    const container = this.$("modal-slots");
     container.innerHTML = "";
     this.state.party.forEach((id, idx) => {
       const job = JOBS.find(j => j.id === id);
@@ -1012,7 +1004,7 @@ class DemocracyMatch {
   }
 
   renderPartyModalJobList() {
-    const container = document.getElementById("modal-job-list");
+    const container = this.$("modal-job-list");
     container.innerHTML = "";
     JOBS.forEach(job => {
       const item = document.createElement("div");
