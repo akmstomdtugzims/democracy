@@ -93,11 +93,11 @@ class DemocracyMatch {
           this.state.cabinetDecisionTurns = 2;
           return true;
         }
-     }, 
+      }, 
       { 
         name: "超法規的政権", skillName: "緊急事態宣言", cdMax: 3,
         condition: (state) => (state.oppressionHp / CONFIG.MAX_OPPRESSION) <= 0.3,
-        desc: "30ダメージ＋「対話」「デモ」の無効化（2ターン継続）", // 
+        desc: "30ダメージ＋「対話」「デモ」の無効化（2ターン継続）", 
         action: () => { 
           this.damagePlayer(30); 
           this.state.emergencyTurns = 2;
@@ -403,7 +403,6 @@ class DemocracyMatch {
             const finalPower = Math.floor(10 * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
             this.state.score += finalPower;
-            }
           } else if (t.type === "DIALOGUE") {
             if (this.state.emergencyTurns > 0) {
               if (!dialogueInvalidatedBannerShown) {
@@ -411,19 +410,19 @@ class DemocracyMatch {
                 dialogueInvalidatedBannerShown = true;
               }
             } else {
-            const prevHp = this.state.playerHp;
-            const healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
-            this.state.playerHp = Math.min(CONFIG.MAX_PLAYER_HP, this.state.playerHp + healVal);
-            
-            const hpRestored = this.state.playerHp > prevHp;
-            const cleansedFake = this.cleanseFakeTiles(2);
-            const restoredBribed = this.restoreBribedMember();
+              const prevHp = this.state.playerHp;
+              const healVal = Math.floor(DROPS.DIALOGUE.heal * buffs.healMult * matchCountMult);
+              this.state.playerHp = Math.min(CONFIG.MAX_PLAYER_HP, this.state.playerHp + healVal);
+              
+              const hpRestored = this.state.playerHp > prevHp;
+              const cleansedFake = this.cleanseFakeTiles(2);
+              const restoredBribed = this.restoreBribedMember();
 
-            if ((hpRestored || cleansedFake > 0 || restoredBribed) && !dialogueSkillTriggered) {
-              this.showSkillBanner("公共の福祉", "気力回復 / 買収奪還 / 虚偽訂正");
-              dialogueSkillTriggered = true;
-            } 
-          }
+              if ((hpRestored || cleansedFake > 0 || restoredBribed) && !dialogueSkillTriggered) {
+                this.showSkillBanner("公共の福祉", "気力回復 / 買収奪還 / 虚偽訂正");
+                dialogueSkillTriggered = true;
+              } 
+            }
           } else if (t.type === "FAKE") {
             this.damagePlayer(DROPS.FAKE.penaltyDamage);
           } else if (t.type === "VERIFY") {
@@ -455,9 +454,10 @@ class DemocracyMatch {
                 demoInvalidatedBannerShown = true;
               }
             } else {
-            const finalPower = Math.floor(buffs.signDemoPower * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
-            turnDamage += finalPower;
-            this.state.score += finalPower;
+              const finalPower = Math.floor(buffs.signDemoPower * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
+              turnDamage += finalPower;
+              this.state.score += finalPower;
+            }
           } else if (DROPS[t.type]) {
             const finalPower = Math.floor(DROPS[t.type].power * (1 + (comboCount - 1) * (0.15 + buffs.comboBonus)) * matchCountMult);
             turnDamage += finalPower;
@@ -583,8 +583,9 @@ class DemocracyMatch {
         if (id === "reporter") buffs.bribedReporterCount++;
       }
     });
-if (this.state.signatureBuffTurns > 0) {
-      buffs.signatureCitizenBonus = 1; // 
+
+    if (this.state.signatureBuffTurns > 0) {
+      buffs.signatureCitizenBonus = 1; 
       activeCitizenCount += buffs.signatureCitizenBonus;
     }
 
@@ -938,7 +939,7 @@ if (this.state.signatureBuffTurns > 0) {
       descLines.push(`署名&デモ威力 0pt`);
     }
 
-   if (this.state.signatureBuffTurns > 0) {
+    if (this.state.signatureBuffTurns > 0) {
       descLines.push(`署名効果:市民+${buffs.signatureCitizenBonus}人(${this.state.signatureBuffTurns}T)`);
     }
     if (buffs.lawyerCount > 0) descLines.push(`毎T開示&虚偽訂正`);
