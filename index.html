@@ -68,7 +68,10 @@
     <p style="font-size:0.7rem; color:#666; text-align:center; margin-bottom:8px;">枠を選択してからメンバーを指定（重複可能）</p>
     <div class="select-grid" id="modal-slots"></div>
     
-    <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem; max-width: 100%;">メンバーをランダム設定</button>
+    <button class="btn" id="btn-party-random" style="background: #495057; margin-bottom: 8px; padding: 6px; font-size: 0.75rem; max-width: 100%;">ランダム</button>
+    <!-- 「決定して戻る」 -->
+    <button class="btn" id="btn-party-close" style="margin-bottom:12px; max-width: 100%;">決定</button>
+
     <div class="job-list" id="modal-job-list"></div>
 
     <div style="font-size:0.75rem; font-weight:bold; margin-top:8px;">■ 行動ドロップ一覧</div>
@@ -79,18 +82,16 @@
       <tbody>
         <tr><td>疑問</td><td>💬</td><td>10 pt</td></tr>
         <tr><td>報道</td><td>📢</td><td>10 pt</td></tr>
-        <tr><td>検証</td><td>🔍</td><td>15 pt + 非開示解除 / 虚偽訂正</td></tr>
+        <tr><td>検証</td><td>🔍</td><td>15 pt + 情報開示 / 虚偽訂正</td></tr>
         <tr><td>署名</td><td>📜</td><td>職数×市民数×10 pt</td></tr>
         <tr><td>デモ</td><td>🪧</td><td>職数×市民数×10 pt</td></tr>
         <tr><td>対話</td><td>🤝</td><td>気力回復 + 買収奪還 + 虚偽訂正</td></tr>
       </tbody>
     </table>
-
-    <button class="btn" id="btn-party-close" style="margin-top:12px; max-width: 100%;">決定して戻る</button>
   </div>
 </div>
 
-<!-- JSの読み込み（順番厳守: 設定データ ➔ メイン処理） -->
+<!-- JSの読み込み -->
 <script src="config.js"></script>
 <script src="game.js"></script>
 </body>
