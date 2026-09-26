@@ -146,7 +146,7 @@
       <div>📢 <b>報道</b>: 権威-50 / 「虚偽」を「疑問」に変換（4以上連結）</div>
       <div>🔍 <b>検証</b>: 権威-50 / 「非開示」or「虚偽」を無効化・削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
-      <div>🪧 <b>デモ</b>: 権威- (専門職×市民×15) ※市民数加算リセット</div>
+      <div>🪧 <b>デモ</b>: 権威- (専門職×市民×15) ※市民数加算初期化</div>
       <div>🤝 <b>対話</b>: 気力+10 / 買収状態解除</div>
       <div><b>虚偽</b>: 気力-10</div>
       <div><b>非開示</b>: 削除不可</div>
@@ -458,7 +458,7 @@
       if (matchedCoords.size > 0) {
         let playerDmg = matchedCoords.size * 10;
         state.playerHp = Math.max(0, state.playerHp - playerDmg);
-        addLog(`「虚偽」が揃い即時消滅：気力-${playerDmg}`, true);
+        addLog(`「虚偽」受容　気力-${playerDmg}`, true);
         matchedCoords.forEach(coord => {
           const [r, c] = coord.split(',').map(Number);
           state.grid[r][c] = null;
@@ -566,7 +566,7 @@
         if (gameState.pendingDemoReset) {
           gameState.citizenCount = gameState.party.filter(m => m && m.jobId === 'citizen').length;
           gameState.pendingDemoReset = false;
-          addLog(`「デモ」終了 市民数加算リセット`);
+          addLog(`「デモ」終了 市民数加算初期化`);
         }
         await endTurnSequence();
       }
@@ -644,9 +644,8 @@
         } else if (type === 'sign') {
           let dmg = count * 50 * solidarityMultiplier;
           totalEnemyDmg += dmg;
-          gameState.enemySkillCounter = Math.max(0, ameState.enemySkillCounter - 1);
+          gameState.enemySkillCounter = Math.max(0, gameState.enemySkillCounter - 1);
           addLog(`${prefix}「署名」提出 権威-${Math.floor(dmg)} 権威側の行動が1ターン遅延`);
-
         } else if (type === 'demo') {
           let dmg = activeSpecialists * gameState.citizenCount * 15 * solidarityMultiplier;
           totalEnemyDmg += dmg;
@@ -912,6 +911,13 @@
 
       let activeEffects = [];
       let activeJobs = gameState.party.filter(m => m && !m.bribed).map(m => m.jobId);
+      
+      // 買収時の常時発動効果の判定
+      let isBribed = (jobId) => gameState.party.find(m => m && m.jobId === jobId)?.bribed || false;
+      if (isBribed('expert')) activeEffects.push('買収専門家：権威回復');
+      if (isBribed('lawyer')) activeEffects.push('買収弁護士：虚偽追加');
+      if (isBribed('reporter')) activeEffects.push('買収記者：報道変換');
+
       let cappedCitizens = Math.min(gameState.citizenCount, 10);
       if (cappedCitizens > 0) activeEffects.push(`全体効果+${cappedCitizens * 10}%`);
       if (activeJobs.includes('expert')) activeEffects.push('毎ターン虚偽-1');
@@ -921,7 +927,7 @@
       if (gameState.cabinetDecisionTurns > 0) activeEffects.push(`「検証」無効(${gameState.cabinetDecisionTurns}T)`);
 
       const effectsEl = document.getElementById('party-effects-display');
-      const effText = activeEffects.length > 0 ? `効果: ${activeEffects.join(' ')}` : '効果: なし';
+      const effText = activeEffects.length > 0 ? `効果: ${activeEffects.join(' ')}` : '';
       effectsEl.textContent = effText;
       effectsEl.style.fontSize = effText.length > 35 ? '7px' : (effText.length > 25 ? '8px' : (effText.length > 18 ? '9px' : '10px'));
 
@@ -980,7 +986,7 @@
       if (tempJobs.includes('reporter')) activeEffects.push('報道必要数-1');
       if (tempJobs.includes('politician')) activeEffects.push('対話効果UP');
 
-      document.getElementById('modal-effects-summary').textContent = activeEffects.join(' / ') || '効果なし';
+      document.getElementById('modal-effects-summary').textContent = activeEffects.join(' / ') || '';
     }
 
     function showResult(isWin, reason) {
@@ -1158,7 +1164,7 @@
         while (modalTempParty.length < 5) modalTempParty.push(null);
         modalSelectedSlotIndex = 0;
         setupPartyModal();
-        document.getElementById('party-modal').classList.remove('hidden');
+        document.getElementById('party-modal').classList.add('hidden');
       };
     };
   </script>
