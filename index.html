@@ -223,6 +223,7 @@
       politician: { id: 'politician', name: '政治家', skillName: '公共の福祉',     desc: '「対話」効果UP', boostBlock: 'dialogue', icons: ['👩‍💼', '👨‍💼'] }
     };
 
+    // 敵スキル定義（追加・拡張）
     const ENEMY_SKILLS = [
       {
         id: 'spin_report',
@@ -413,7 +414,7 @@
         for (let r = 0; r < GRID_SIZE; r++) {
           for (let c = 0; c < GRID_SIZE; c++) state.grid[r][c] = blocks[idx++];
         }
-        if (checkMatches(gameState.grid).length === 0) valid = true;
+        if (checkMatches(state.grid).length === 0) valid = true;
       }
     }
 
@@ -510,12 +511,6 @@
       gameState.playerHp = Math.max(0, gameState.playerHp - 5);
 
       checkInstantFakeMatch(gameState);
-      
-      // スキル発動前にゲーム終了判定を行う
-      checkGameEnd();
-      if (gameState.gameEnded) return;
-
-      let enemySkillTriggered = false;
 
       if (gameState.enemyHp > 0) {
         gameState.enemySkillCountdown--;
@@ -526,17 +521,17 @@
         }
       }
 
-      if (checkMatches(gameState.grid).length > 0) {
-        await processCascade(1);
-      } else {
-        if (!enemySkillTriggered) {
-          addLog(`ブロック移動`);
-          updateUI();
-          await endTurnSequence();
-        } else {
-          updateUI();
-        }
-      }
+if (checkMatches(gameState.grid).length > 0) {
+    await processCascade(1);
+  } else {
+    if (!enemySkillTriggered) {
+      addLog(`ブロック移動`);
+      updateUI();
+      await endTurnSequence();
+    } else {
+      updateUI();
+    }
+  }
 
       gameState.isProcessing = false;
       checkGameEnd();
@@ -653,7 +648,7 @@
           addLog(`${prefix}「報道」発信 権威-${Math.floor(dmg)}`);
           if (count >= (activeJobs.includes('reporter') ? 3 : 4)) {
             let converted = convertRandomBlocks('fake', 'question', 1);
-            if (converted > 0) addLog(`${prefix}記者：【報道の自由】により「虚偽」を${converted}除去`);
+            if (converted > 0) addLog(`${prefix}記者：【報道の自由】「虚偽」を${converted}除去`);
           }
         } else if (type === 'verify') {
           if (gameState.cabinetDecisionTurns > 0) {
@@ -725,7 +720,7 @@
           }
         }
       }
-      if (count > 0) addLog(`専門家：【客観性の担保】により「${BLOCK_TYPES[typeKey.toUpperCase()].name}」を${count}除去`);
+      if (count > 0) addLog(`専門家：【客観性の担保】「${BLOCK_TYPES[typeKey.toUpperCase()].name}」を${count}除去`);
       return count;
     }
 
@@ -874,7 +869,7 @@
             cell.classList.remove('cell-touching');
             if (!touchStartInfo) return;
             if (e.changedTouches.length > 0) {
-              handleSwipeMove(touchStartInfo.r, touchStartInfo.c, e.changedTouches[0].clientX - touchStartInfo.x, e.clientY - touchStartInfo.y);
+              handleSwipeMove(touchStartInfo.r, touchStartInfo.c, e.changedTouches[0].clientX - touchStartInfo.x, e.changedTouches[0].clientY - touchStartInfo.y);
             }
             touchStartInfo = null;
           });
@@ -1114,18 +1109,6 @@
     }
 
     window.onload = function() {
-const btnToggleLog = document.getElementById('btn-toggle-log');
-      const logModal = document.getElementById('log-modal');
-      const logModalClose = document.getElementById('log-modal-close');
-
-      btnToggleLog.onclick = () => {
-        logModal.classList.remove('hidden');
-        updateLogModalList();
-      };
-
-      logModalClose.onclick = () => {
-        logModal.classList.add('hidden');
-      };
       resetGame();
 
       document.getElementById('btn-reset-game').onclick = () => { if (!gameState.isProcessing) resetGame(); };
@@ -1138,7 +1121,7 @@ const btnToggleLog = document.getElementById('btn-toggle-log');
       document.getElementById('btn-manual-party').onclick = () => {
         if (gameState.isProcessing) return;
         modalTempParty = JSON.parse(JSON.stringify(gameState.party));
-        while (modalTempParty.length < 5) modalTempParty.post?.(null) || modalTempParty.push(null);
+        while (modalTempParty.length < 5) modalTempParty.push(null);
         modalSelectedSlotIndex = 0;
         setupPartyModal();
         document.getElementById('party-modal').classList.remove('hidden');
@@ -1169,6 +1152,33 @@ const btnToggleLog = document.getElementById('btn-toggle-log');
         updateUI();
         addLog('メンバーを手動編成しました');
         document.getElementById('party-modal').classList.add('hidden');
+      };
+
+      document.getElementById('btn-toggle-log').onclick = () => {
+        updateLogModalList();
+        document.getElementById('log-modal').classList.remove('hidden');
+      };
+
+      document.getElementById('log-modal-close').onclick = () => document.getElementById('log-modal').classList.add('hidden');
+      document.getElementById('result-close-x').onclick = () => {
+        document.getElementById('result-modal').classList.add('hidden');
+        updateUI();
+      };
+      
+      document.getElementById('btn-to-clear-screen').onclick = () => {
+        if (gameState.lastWinState) showResult(gameState.lastWinState.isWin, gameState.lastWinState.reason);
+      };
+
+      document.getElementById('result-retry-btn').onclick = () => resetGame();
+
+      document.getElementById('result-select-party-btn').onclick = () => {
+        document.getElementById('result-modal').classList.add('hidden');
+        resetGame();
+        modalTempParty = JSON.parse(JSON.stringify(gameState.party));
+        while (modalTempParty.length < 5) modalTempParty.push(null);
+        modalSelectedSlotIndex = 0;
+        setupPartyModal();
+        document.getElementById('party-modal').classList.remove('hidden');
       };
     };
   </script>
