@@ -73,7 +73,7 @@
     <div class="flex justify-between items-center px-2 py-1 bg-white border-b border-black text-xs font-bold flex-shrink-0">
       <div>残りターン: <span id="turns-display" class="text-sm font-black">20</span></div>
       <div>スコア: <span id="score-display" class="text-sm font-black">0</span></div>
-      <button id="btn-reset-game" class="flat-btn-outline px-2 py-0.5 text-[10px]">リセット</button>
+      <button id="btn-reset-game" class="flat-btn-outline px-2 py-0.5 text-[10px]">はじめから</button>
     </div>
 
     <!-- 3. 権威ステータスエリア -->
@@ -105,7 +105,7 @@
       <div class="flex items-center justify-between pt-0.5 gap-1">
         <div class="flex-1 min-w-0 flex flex-col justify-center text-[9px] font-bold text-gray-800 leading-tight">
           <div id="party-counts-display" class="truncate">属性: 市民5</div>
-          <div id="party-effects-display" class="truncate text-gray-600">効果: 全体効果+50%</div>
+          <div id="party-effects-display" class="whitespace-nowrap overflow-hidden text-gray-600">効果: 全体効果+50%</div>
         </div>
         <div class="flex items-center space-x-1 flex-shrink-0">
           <button id="btn-random-party" class="flat-btn px-1.5 py-0.5 text-[9px]">ランダム</button>
@@ -150,14 +150,14 @@
     </div>
 
     <div class="text-xs font-bold mb-1 flex-shrink-0">属性一覧:</div>
-    <div id="modal-job-list" class="space-y-1 text-xs mb-2 flex-1 overflow-y-auto min-h-0"></div>
+    <div id="modal-job-list" class="space-y-1 text-xs mb-2"></div>
 
     <div class="border-t border-black pt-1.5 mb-1 text-[11px] space-y-0.5 bg-gray-50 p-1.5 border flex-shrink-0">
       <div class="font-bold border-b border-gray-300 pb-0.5 mb-0.5">【ブロック概要】</div>
-      <div>💬 <b>疑問</b>: 権威-50 </div>
+      <div>💬 <b>疑問</b>: 権威-50 / 市民数UP（上限10） </div>
       <div>📢 <b>報道</b>: 権威-50 / 虚偽を疑問に変換（4以上連結）</div>
-      <div>🔍 <b>検証</b>: 権威-50 / すべての虚偽を無効化・削除</div>
-      <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延させる</div>
+      <div>🔍 <b>検証</b>: 権威-50 / 虚偽を無効化・削除</div>
+      <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
       <div>🪧 <b>デモ</b>: 権威- (専門職×市民×15) ※市民数リセット</div>
       <div>🤝 <b>対話</b>: 気力+10 / 買収状態解除</div>
       <div><b>虚偽</b>: 気力-10</div>
@@ -225,14 +225,14 @@
 
     const JOBS = {
       citizen:    { id: 'citizen',    name: '市民',   skillName: '連帯',         desc: '市民数が増えるほど全体効果UP', boostBlock: 'question', icons: ['🧑‍💼', '👨‍💼', '👩‍🍳', '🧑‍🌾', '🧑‍🎨'] },
-      reporter:   { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」効果UP　スキル必要ブロック-1', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
+      reporter:   { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」効果UP スキル必要ブロック-1', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
       expert:     { id: 'expert',     name: '専門家', skillName: '客観性の担保',   desc: '毎ターン「虚偽」1訂正', boostBlock: 'verify', icons: ['👩‍💻', '🧑‍💻'] },
       lawyer:     { id: 'lawyer',     name: '弁護士', skillName: '社会正義の実現', desc: '毎ターン「非開示」1解除', boostBlock: 'sign', icons: ['👩‍⚖️', '👨‍⚖️'] },
       politician: { id: 'politician', name: '政治家', skillName: '公共の福祉',     desc: '「対話」効果UP', boostBlock: 'dialogue', icons: ['👩‍💼', '👨‍💼'] }
     };
 
     /* ==========================================================================
-       2. 敵スキル定義 (※新スキル追加時はこの配列に追加する)
+       2. 敵スキル定義
        ========================================================================== */
     const ENEMY_SKILLS = [
       {
@@ -253,16 +253,21 @@
         description: '「疑問」を「虚偽」に変換',
         playerDamage: 10,
         async execute(state) {
-          let count = 0;
+          let questionCoords = [];
           for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
               if (state.grid[r][c] && state.grid[r][c].type === 'question') {
-                state.grid[r][c] = createBlock('fake');
-                count++;
+                questionCoords.push({ r, c });
               }
             }
           }
-          addLog(`${this.performer}の【${this.name}】発生。「疑問」${count}個を「虚偽」に変換`, true);
+          questionCoords.sort(() => Math.random() - 0.5);
+          let targetCount = Math.floor(Math.random() * 2) + 3; // 3〜4個を選択
+          let convertList = questionCoords.slice(0, targetCount);
+          convertList.forEach(pt => {
+            state.grid[pt.r][pt.c] = createBlock('fake');
+          });
+          addLog(`${this.performer}の【${this.name}】発生。「疑問」${convertList.length}個を「虚偽」に変換`, true);
         }
       },
       {
@@ -454,34 +459,32 @@
 
       // 横方向の判定
       for (let r = 0; r < GRID_SIZE; r++) {
-        let matchLen = 1;
-        for (let c = 0; c < GRID_SIZE; c++) {
+        for (let c = 0; c < GRID_SIZE - 2; c++) {
           let cur = grid[r][c];
-          let next = (c < GRID_SIZE - 1) ? grid[r][c + 1] : null;
-          if (cur && next && cur.type === next.type && cur.type !== 'conceal') {
-            matchLen++;
-          } else {
-            if (matchLen >= 3) {
-              for (let k = 0; k < matchLen; k++) matchedCoords.add(`${r},${c - k}`);
+          if (cur && cur.type && cur.type !== 'conceal') {
+            let type = cur.type;
+            if (grid[r][c + 1] && grid[r][c + 1].type === type &&
+                grid[r][c + 2] && grid[r][c + 2].type === type) {
+              matchedCoords.add(`${r},${c}`);
+              matchedCoords.add(`${r},${c + 1}`);
+              matchedCoords.add(`${r},${c + 2}`);
             }
-            matchLen = 1;
           }
         }
       }
 
       // 縦方向の判定
       for (let c = 0; c < GRID_SIZE; c++) {
-        let matchLen = 1;
-        for (let r = 0; r < GRID_SIZE; r++) {
+        for (let r = 0; r < GRID_SIZE - 2; r++) {
           let cur = grid[r][c];
-          let nextVal = (r < GRID_SIZE - 1) ? grid[r + 1][c] : null;
-          if (cur && nextVal && cur.type === nextVal.type && cur.type !== 'conceal') {
-            matchLen++;
-          } else {
-            if (matchLen >= 3) {
-              for (let k = 0; k < matchLen; k++) matchedCoords.add(`${r - k},${c}`);
+          if (cur && cur.type && cur.type !== 'conceal') {
+            let type = cur.type;
+            if (grid[r + 1][c] && grid[r + 1][c].type === type &&
+                grid[r + 2][c] && grid[r + 2][c].type === type) {
+              matchedCoords.add(`${r},${c}`);
+              matchedCoords.add(`${r + 1},${c}`);
+              matchedCoords.add(`${r + 2},${c}`);
             }
-            matchLen = 1;
           }
         }
       }
@@ -704,7 +707,7 @@
             gameState.enemySkillCounter--;
             addLog(`「署名」提出${comboTag} 権威-${Math.floor(dmg)}（権威行動1T遅延）`);
           } else {
-            addLog(`「署名」提出${comboTag} 権威-${Math.floor(dmg)}`);
+            addLog(`「署名」提出${comboTag} 権威-${Math.floor(dmg)}権威側の行動が1ターン遅延`);
           }
         }
         else if (type === 'demo') {
@@ -790,7 +793,7 @@
         if (fakePts.length > 0) {
           let pt = fakePts[Math.floor(Math.random() * fakePts.length)];
           gameState.grid[pt.r][pt.c] = getRandomBlockByDropRate();
-          addLog(`「専門家」により盤面の「虚偽」を1除去`);
+          addLog(`専門家：「虚偽」を1除去`);
         }
       }
 
@@ -804,7 +807,7 @@
         if (concealPts.length > 0) {
           let pt = concealPts[Math.floor(Math.random() * concealPts.length)];
           gameState.grid[pt.r][pt.c] = getRandomBlockByDropRate();
-          addLog(`「弁護士」により盤面の「非開示」を1除去`);
+          addLog(`弁護士：「非開示」を1除去`);
         }
       }
 
@@ -979,11 +982,11 @@
         </div>`;
       }).join('');
 
-      // 構成メンバー属性集計表示
+      // 構成メンバー属性集計表示（買収状態メンバーを除外）
       const counts = {};
       let initialCitizenCount = 0;
       gameState.party.forEach(m => {
-        if (m) {
+        if (m && !m.bribed) {
           counts[JOBS[m.jobId].name] = (counts[JOBS[m.jobId].name] || 0) + 1;
           if (m.jobId === 'citizen') initialCitizenCount++;
         }
@@ -1008,7 +1011,7 @@
 
       document.getElementById('party-counts-display').textContent = countsArr.length > 0 ? `属性: ${countsArr.join(' ')}` : '属性: なし';
 
-      // 構成メンバー効果表示
+      // 構成メンバー効果表示（文字サイズ自動調整）
       let activeEffects = [];
       const activeJobs = gameState.party.filter(m => m && !m.bribed).map(m => m.jobId);
       let cappedCitizens = Math.min(gameState.citizenCount, 10);
@@ -1020,7 +1023,20 @@
       if (activeJobs.includes('politician')) activeEffects.push('対話効果UP');
       if (gameState.cabinetDecisionTurns > 0) activeEffects.push(`閣議決定(${gameState.cabinetDecisionTurns}T)`);
 
-      document.getElementById('party-effects-display').textContent = activeEffects.length > 0 ? `効果: ${activeEffects.join(' ')}` : '効果: なし';
+      const effectsEl = document.getElementById('party-effects-display');
+      const effText = activeEffects.length > 0 ? `効果: ${activeEffects.join(' ')}` : '効果: なし';
+      effectsEl.textContent = effText;
+
+      const effLen = effText.length;
+      if (effLen > 35) {
+        effectsEl.style.fontSize = '7px';
+      } else if (effLen > 25) {
+        effectsEl.style.fontSize = '8px';
+      } else if (effLen > 18) {
+        effectsEl.style.fontSize = '9px';
+      } else {
+        effectsEl.style.fontSize = '10px';
+      }
     }
 
     function updateGuidanceDisplay() {
