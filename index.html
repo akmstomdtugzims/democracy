@@ -23,7 +23,7 @@
     .flat-btn {
       background-color: #000000;
       color: #ffffff;
-      border: 2px solid #000000;
+      border: 1.5px solid #000000;
       font-weight: bold;
       transition: opacity 0.1s;
     }
@@ -33,7 +33,7 @@
     .flat-btn-outline {
       background-color: #ffffff;
       color: #000000;
-      border: 2px solid #000000;
+      border: 1.5px solid #000000;
       font-weight: bold;
     }
     .flat-btn-outline:active {
@@ -67,16 +67,16 @@
   <!-- スマホ縦画面固定レイアウト -->
   <div id="game-container" class="w-full max-w-md h-full flex flex-col justify-between p-2 box-border bg-white text-black relative select-none">
     
-    <!-- 1. ヘッダー -->
-    <header class="text-center py-1 border-b-2 border-black flex-shrink-0">
-      <h1 class="text-xl font-black tracking-widest leading-none">ﾃﾞﾓﾏﾁ3</h1>
-      <div class="text-[9px] font-bold tracking-wider text-gray-700 mt-0.5">DEMOCRACY MATCH 3 GAME</div>
+    <!-- 1. ヘッダー (1行表示) -->
+    <header class="py-1 border-b-2 border-black flex justify-between items-baseline px-2 flex-shrink-0">
+      <h1 class="text-base font-black tracking-widest leading-none">ﾃﾞﾓﾏﾁ3</h1>
+      <span class="text-[9px] font-bold tracking-wider text-gray-600">DEMOCRACY MATCH 3 GAME</span>
     </header>
 
     <!-- 2. 基本情報エリア -->
-    <div class="flex justify-between items-center px-2 py-1 bg-white border-b border-black text-sm font-bold flex-shrink-0">
-      <div>残りターン: <span id="turns-display" class="text-base font-black">20</span></div>
-      <div>スコア: <span id="score-display" class="text-base font-black">0</span></div>
+    <div class="flex justify-between items-center px-2 py-1 bg-white border-b border-black text-xs font-bold flex-shrink-0">
+      <div>残りターン: <span id="turns-display" class="text-sm font-black">20</span></div>
+      <div>スコア: <span id="score-display" class="text-sm font-black">0</span></div>
       <button id="btn-reset-game" class="flat-btn-outline px-2 py-0.5 text-[10px]">リセット</button>
     </div>
 
@@ -86,11 +86,11 @@
         <span>権威</span>
         <span id="enemy-hp-text">3500 / 3500</span>
       </div>
-      <div class="w-full bg-gray-200 border border-black h-4 relative">
+      <div class="w-full bg-gray-200 border border-black h-3.5 relative">
         <div id="enemy-hp-bar" class="bg-black h-full transition-all duration-300" style="width: 100%;"></div>
       </div>
       <!-- 敵行動予告 -->
-      <div id="enemy-intent-display" class="text-[10px] font-bold text-red-700 mt-1 truncate">
+      <div id="enemy-intent-display" class="text-[10px] font-bold text-red-700 mt-0.5 truncate">
         次行動: --
       </div>
     </div>
@@ -101,38 +101,41 @@
         <span>気力</span>
         <span id="player-hp-text">100 / 100</span>
       </div>
-      <div class="w-full bg-gray-200 border border-black h-4 relative">
+      <div class="w-full bg-gray-200 border border-black h-3.5 relative">
         <div id="player-hp-bar" class="bg-black h-full transition-all duration-300" style="width: 100%;"></div>
       </div>
+      
       <!-- パーティメンバー表示 -->
-      <div id="party-icons-container" class="flex justify-around items-center pt-1">
+      <div id="party-icons-container" class="flex justify-around items-center pt-0.5">
         <!-- JS動的生成 -->
       </div>
-      <!-- 操作ボタン群（メンバーアイコン下部へ移動） -->
-      <div class="flex justify-center space-x-2 py-0.5">
-        <button id="btn-random-party" class="flat-btn px-2 py-0.5 text-[10px]">ランダム設定</button>
-        <button id="btn-manual-party" class="flat-btn-outline px-2 py-0.5 text-[10px]">手動選択</button>
-      </div>
-      <!-- 職種数・効果（2行分離表示） -->
-      <div class="text-[11px] font-semibold text-gray-800 pt-0.5 space-y-0.5">
-        <div id="party-counts-display" class="truncate font-bold">職種: 市民５</div>
-        <div id="party-effects-display" class="truncate font-bold text-gray-700">効果: 連帯効果</div>
+      
+      <!-- 職種・効果 ＆ 設定ボタン（1行同列配置） -->
+      <div class="flex items-center justify-between pt-0.5 gap-1">
+        <div class="flex-1 min-w-0 flex flex-col justify-center text-[9px] font-bold text-gray-800 leading-tight">
+          <div id="party-counts-display" class="truncate">職種: 市民５</div>
+          <div id="party-effects-display" class="truncate text-gray-600">効果: 連帯効果</div>
+        </div>
+        <div class="flex items-center space-x-1 flex-shrink-0">
+          <button id="btn-random-party" class="flat-btn px-1.5 py-0.5 text-[9px]">ランダム</button>
+          <button id="btn-manual-party" class="flat-btn-outline px-1.5 py-0.5 text-[9px]">手動</button>
+        </div>
       </div>
     </div>
 
     <!-- 5. ガイダンスエリア（最新2件表示） -->
-    <div class="border-b border-black p-1 flex justify-between items-center text-xs flex-shrink-0 bg-gray-50 h-10">
+    <div class="border-b border-black p-1 flex justify-between items-center text-xs flex-shrink-0 bg-gray-50 h-9">
       <div id="guidance-text" class="truncate font-bold text-gray-900 pr-1 flex flex-col justify-center h-full text-[10px] leading-tight flex-1">
         <div>ゲーム開始：操作して権威を減らしましょう</div>
-        <div class="text-gray-500">--</div>
+        <div class="text-gray-400">--</div>
       </div>
-      <button id="btn-toggle-log" class="flat-btn px-2 py-0.5 text-xs flex-shrink-0">▼</button>
+      <button id="btn-toggle-log" class="flat-btn px-1.5 py-0.5 text-xs flex-shrink-0">▼</button>
     </div>
 
-    <!-- 6. パズルエリア (8x8 Grid) -->
+    <!-- 6. パズルエリア (6x6 Grid) -->
     <div class="flex-1 flex items-center justify-center p-1 overflow-hidden min-h-0">
-      <div id="puzzle-grid" class="grid grid-cols-8 gap-1 w-full aspect-square border-2 border-black p-1 bg-gray-100 touch-none">
-        <!-- 64個のセルが生成されます -->
+      <div id="puzzle-grid" class="grid grid-cols-6 gap-1 w-full aspect-square border-2 border-black p-1 bg-gray-100 touch-none">
+        <!-- 36個のセルが生成されます -->
       </div>
     </div>
 
@@ -174,7 +177,7 @@
       <div class="font-bold border-b border-gray-300 pb-0.5 mb-1">【ブロック概要】</div>
       <div>💬 <b>疑問</b>: 権威-100 </div>
       <div>📢 <b>報道</b>: 権威-100 / 4消しで「疑問」→「報道」</div>
-      <div>🔍 <b>検証</b>: 権威-100 / 虚偽全削除</div>
+      <div>🔍 <b>検証</b>: 権威-100 / 虚偽全削除（ダメージ無し）</div>
       <div>📜 <b>署名</b>: 権威-100 / 「市民」+1</div>
       <div>🪧 <b>デモ</b>: 権威- (専門職×市民×30) （市民数リセット）</div>
       <div>🤝 <b>対話</b>: 気力+10 / 「買収」解除</div>
@@ -234,7 +237,9 @@
   </div>
 
   <script>
-    /* 1. 基本定数・データ定義 */
+    /* 定数定義 (6x6) */
+    const GRID_SIZE = 6;
+
     const BLOCK_TYPES = {
       QUESTION:  { id: 'question',  name: '疑問',  icon: '💬', bg: '#e0f2fe', text: '#000000', baseDmg: 100, heal: 0 },
       REPORT:    { id: 'report',    name: '報道',  icon: '📢', bg: '#3b82f6', text: '#ffffff', baseDmg: 100, heal: 0 },
@@ -276,8 +281,8 @@
         playerDamage: 10,
         execute(state) {
           let count = 0;
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
+          for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
               if (state.grid[r][c] && state.grid[r][c].type === 'question') {
                 state.grid[r][c] = createBlock('fake');
                 count++;
@@ -291,21 +296,21 @@
         id: 'withhold_answer',
         performer: '隠蔽議員',
         name: '答弁差控',
-        description: '5個を「非開示」に変換',
+        description: '4個を「非開示」に変換',
         playerDamage: 20,
         execute(state) {
           let coords = [];
-          for (let r = 0; r < 8; r++) {
-            for (let c = 0; c < 8; c++) {
+          for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
               coords.push({r, c});
             }
           }
           coords.sort(() => Math.random() - 0.5);
-          let targetCoords = coords.slice(0, 5);
+          let targetCoords = coords.slice(0, 4);
           targetCoords.forEach(pt => {
             state.grid[pt.r][pt.c] = createBlock('conceal');
           });
-          return `${this.performer}の【${this.name}】発生。5ブロックを「非開示」に変換`;
+          return `${this.performer}の【${this.name}】発生。4ブロックを「非開示」に変換`;
         }
       },
       {
@@ -333,17 +338,17 @@
         id: 'propaganda',
         performer: '世論誘導広報室',
         name: 'プロパガンダ',
-        description: '3×3範囲を「虚偽」に変換',
+        description: '2×2範囲を「虚偽」に変換',
         playerDamage: 0,
         execute(state) {
-          let centerR = Math.floor(Math.random() * 6) + 1;
-          let centerC = Math.floor(Math.random() * 6) + 1;
-          for (let dr = -1; dr <= 1; dr++) {
-            for (let dc = -1; dc <= 1; dc++) {
+          let centerR = Math.floor(Math.random() * (GRID_SIZE - 1));
+          let centerC = Math.floor(Math.random() * (GRID_SIZE - 1));
+          for (let dr = 0; dr <= 1; dr++) {
+            for (let dc = 0; dc <= 1; dc++) {
               state.grid[centerR + dr][centerC + dc] = createBlock('fake');
             }
           }
-          return `${this.performer}の【${this.name}】発生。3×3の範囲が「虚偽」に変化`;
+          return `${this.performer}の【${this.name}】発生。2×2の範囲が「虚偽」に変化`;
         }
       },
       {
@@ -359,7 +364,7 @@
       }
     ];
 
-    /* 2. ゲーム状態管理 */
+    /* ゲーム状態管理 */
     let gameState = {
       turnsLeft: 20,
       score: 0,
@@ -383,7 +388,7 @@
     let modalSelectedSlotIndex = 0;
     let touchStartInfo = null;
 
-    /* 3. 補助関数 */
+    /* 補助関数 */
     function getRandomIcon(jobId) {
       const icons = JOBS[jobId].icons;
       return icons[Math.floor(Math.random() * icons.length)];
@@ -433,7 +438,7 @@
       const len = gameState.logs.length;
       const latest1 = len > 0 ? gameState.logs[len - 1] : 'ゲーム開始';
       const latest2 = len > 1 ? gameState.logs[len - 2] : '--';
-      guidanceEl.innerHTML = `<div>${latest1}</div><div class="text-gray-500">${latest2}</div>`;
+      guidanceEl.innerHTML = `<div>${latest1}</div><div class="text-gray-400">${latest2}</div>`;
     }
 
     function updateLogModalList() {
@@ -452,14 +457,14 @@
       return 3;
     }
 
-    /* 4. パズル盤面処理 */
+    /* パズル盤面処理 */
     function initGrid() {
       let valid = false;
       while (!valid) {
         gameState.grid = [];
-        for (let r = 0; r < 8; r++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
           let row = [];
-          for (let c = 0; c < 8; c++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
             row.push(getRandomBlockByDropRate());
           }
           gameState.grid.push(row);
@@ -473,15 +478,15 @@
 
     function shuffleGrid(state) {
       let blocks = [];
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           blocks.push(state.grid[r][c]);
         }
       }
       blocks.sort(() => Math.random() - 0.5);
       let idx = 0;
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           state.grid[r][c] = blocks[idx++];
         }
       }
@@ -490,11 +495,11 @@
     function checkMatches(grid) {
       let matchedCoords = new Set();
 
-      for (let r = 0; r < 8; r++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
         let matchLen = 1;
-        for (let c = 0; c < 8; c++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           let cur = grid[r][c];
-          let next = (c < 7) ? grid[r][c + 1] : null;
+          let next = (c < GRID_SIZE - 1) ? grid[r][c + 1] : null;
           
           if (cur && next && cur.type === next.type && cur.type !== 'conceal') {
             matchLen++;
@@ -509,11 +514,11 @@
         }
       }
 
-      for (let c = 0; c < 8; c++) {
+      for (let c = 0; c < GRID_SIZE; c++) {
         let matchLen = 1;
-        for (let r = 0; r < 8; r++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
           let cur = grid[r][c];
-          let nextVal = (r < 7) ? grid[r + 1][c] : null;
+          let nextVal = (r < GRID_SIZE - 1) ? grid[r + 1][c] : null;
 
           if (cur && nextVal && cur.type === nextVal.type && cur.type !== 'conceal') {
             matchLen++;
@@ -534,7 +539,7 @@
       });
     }
 
-    /* 5. ブロック操作 & スワップロジック */
+    /* ブロック操作 & スワップロジック */
     async function selectOrSwapCell(r, c) {
       if (gameState.isProcessing || gameState.gameEnded) return;
 
@@ -564,17 +569,20 @@
       gameState.selectedCell = null;
       gameState.isProcessing = true;
 
+      // 駒スワップ実行
       const temp = gameState.grid[prevR][prevC];
       gameState.grid[prevR][prevC] = gameState.grid[r][c];
       gameState.grid[r][c] = temp;
       renderGrid();
+
+      // 操作1回につき必ず残りターン数を減らす
+      gameState.turnsLeft--;
 
       let matches = checkMatches(gameState.grid);
 
       if (matches.length > 0) {
         await processCascade(1);
       } else {
-        gameState.turnsLeft--;
         addLog(`盤面移動（マッチなし）：残り ${gameState.turnsLeft} ターン`);
         updateUI();
         await endTurnSequence();
@@ -597,7 +605,7 @@
         targetR += (deltaY > 0) ? 1 : -1;
       }
 
-      if (targetR >= 0 && targetR < 8 && targetC >= 0 && targetC < 8) {
+      if (targetR >= 0 && targetR < GRID_SIZE && targetC >= 0 && targetC < GRID_SIZE) {
         gameState.selectedCell = { r: fromR, c: fromC };
         selectOrSwapCell(targetR, targetC);
       }
@@ -652,7 +660,7 @@
     function highlightMatches(matches) {
       const gridEl = document.getElementById('puzzle-grid');
       matches.forEach(pt => {
-        const index = pt.r * 8 + pt.c;
+        const index = pt.r * GRID_SIZE + pt.c;
         const cellEl = gridEl.children[index];
         if (cellEl) {
           cellEl.classList.add('flash-anim');
@@ -661,8 +669,8 @@
     }
 
     function dropBlocks() {
-      for (let c = 0; c < 8; c++) {
-        for (let r = 7; r >= 0; r--) {
+      for (let c = 0; c < GRID_SIZE; c++) {
+        for (let r = GRID_SIZE - 1; r >= 0; r--) {
           if (gameState.grid[r][c] === null) {
             for (let nr = r - 1; nr >= 0; nr--) {
               if (gameState.grid[nr][c] !== null) {
@@ -677,8 +685,8 @@
     }
 
     function fillEmptyBlocks() {
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           if (gameState.grid[r][c] === null) {
             gameState.grid[r][c] = getRandomBlockByDropRate();
           }
@@ -686,7 +694,7 @@
       }
     }
 
-    /* 6. スキル効果計算 */
+    /* スキル効果計算 */
     function applyMatchSkills(typeCounts, totalMatchCount, comboCount) {
       let cappedCitizens = Math.min(gameState.citizenCount, 10);
       let solidarityMultiplier = 1 + (cappedCitizens * 0.1);
@@ -740,6 +748,7 @@
             totalEnemyDmg += dmg;
             addLog(`「検証」実施${comboTag} 権威${Math.floor(dmg)}削減`);
 
+            // 「検証」による「虚偽」全削除（気力マイナス無し）
             removeAllBlocksOfType('fake');
 
             if (isBribed('expert')) {
@@ -779,6 +788,7 @@
           }
         }
         else if (type === 'fake') {
+          // 「虚偽」ブロック自体を直接マッチ消去した場合のみ気力マイナス
           let playerDmg = count * 10;
           gameState.playerHp = Math.max(0, gameState.playerHp - playerDmg);
           addLog(`「虚偽」消滅により気力減少: -${playerDmg}`);
@@ -795,8 +805,8 @@
 
     function convertRandomBlocks(fromType, toType, maxCount) {
       let targets = [];
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           if (gameState.grid[r][c] && gameState.grid[r][c].type === fromType) {
             targets.push({r, c});
           }
@@ -811,8 +821,8 @@
 
     function removeAllBlocksOfType(typeKey) {
       let count = 0;
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           if (gameState.grid[r][c] && gameState.grid[r][c].type === typeKey) {
             gameState.grid[r][c] = getRandomBlockByDropRate();
             count++;
@@ -820,11 +830,11 @@
         }
       }
       if (count > 0) {
-        addLog(`盤面の「${BLOCK_TYPES[typeKey.toUpperCase()].name}」${count}個を削除`);
+        addLog(`盤面の「${BLOCK_TYPES[typeKey.toUpperCase()].name}」${count}個を削除（安全消去）`);
       }
     }
 
-    /* 7. ターン終了シーケンス */
+    /* ターン終了シーケンス */
     async function endTurnSequence() {
       if (gameState.cabinetDecisionTurns > 0) {
         gameState.cabinetDecisionTurns--;
@@ -834,8 +844,8 @@
       
       if (activeJobs.includes('expert')) {
         let concealPts = [];
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
             if (gameState.grid[r][c] && gameState.grid[r][c].type === 'conceal') concealPts.push({r, c});
           }
         }
@@ -848,8 +858,8 @@
 
       if (activeJobs.includes('lawyer')) {
         let fakePts = [];
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
             if (gameState.grid[r][c] && gameState.grid[r][c].type === 'fake') fakePts.push({r, c});
           }
         }
@@ -872,8 +882,8 @@
 
       if (isBribed('lawyer')) {
         let normalPts = [];
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
             if (gameState.grid[r][c] && BASIC_BLOCK_KEYS.includes(gameState.grid[r][c].type)) normalPts.push({r, c});
           }
         }
@@ -919,18 +929,21 @@
       await new Promise(res => setTimeout(res, 200));
     }
 
-    /* 8. 勝敗判定 & リザルト画面 */
+    /* 勝敗判定 & リザルト画面 */
     function checkGameEnd() {
       if (gameState.gameEnded) return;
 
       if (gameState.enemyHp <= 0) {
         gameState.gameEnded = true;
+        addLog('ゲーム終了：権威達成');
         showResult(true, 'clear');
       } else if (gameState.playerHp <= 0) {
         gameState.gameEnded = true;
+        addLog('ゲーム終了：気力0');
         showResult(false, 'hp0');
       } else if (gameState.turnsLeft <= 0) {
         gameState.gameEnded = true;
+        addLog('ゲーム終了：ターン0');
         showResult(false, 'turn0');
       }
     }
@@ -993,13 +1006,13 @@
       modal.classList.remove('hidden');
     }
 
-    /* 9. UI描画・イベントハンドラ */
+    /* UI描画・イベントハンドラ */
     function renderGrid() {
       const gridEl = document.getElementById('puzzle-grid');
       gridEl.innerHTML = '';
 
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+      for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
           const block = gameState.grid[r][c];
           const cell = document.createElement('div');
           
@@ -1023,7 +1036,7 @@
               cell.style.backgroundColor = info.bg;
               cell.style.color = info.text;
               cell.textContent = info.icon;
-              cell.style.fontSize = '1.25rem';
+              cell.style.fontSize = '1.35rem';
             }
           }
 
@@ -1071,7 +1084,7 @@
       let playerPct = Math.max(0, (gameState.playerHp / gameState.playerMaxHp) * 100);
       document.getElementById('player-hp-bar').style.width = `${playerPct}%`;
 
-      // 敵行動予告の更新
+      // 敵行動予告
       const intentEl = document.getElementById('enemy-intent-display');
       if (intentEl) {
         if (!gameState.nextEnemySkill) {
@@ -1125,7 +1138,7 @@
       document.getElementById('party-effects-display').textContent = activeEffects.length > 0 ? `効果: ${activeEffects.join(' ')}` : '効果: なし';
     }
 
-    /* 10. モーダル・パーティ設定イベント */
+    /* モーダル・パーティ設定イベント */
     function setupPartyModal() {
       const slotsEl = document.getElementById('modal-party-slots');
       slotsEl.innerHTML = modalTempParty.map((m, idx) => {
@@ -1197,7 +1210,7 @@
       updateUI();
     }
 
-    /* 11. ゲーム初期化 */
+    /* ゲーム初期化 */
     function resetGame() {
       gameState.turnsLeft = 20;
       gameState.score = 0;
@@ -1217,7 +1230,7 @@
       initGrid();
       renderGrid();
       updateUI();
-      addLog('ゲーム開始：ブロックを操作して権威を減らそう');
+      addLog('ゲーム開始：操作して権威を減らしましょう');
 
       document.getElementById('result-modal').classList.add('hidden');
     }
@@ -1228,7 +1241,6 @@
       document.getElementById('btn-reset-game').onclick = () => {
         if (gameState.isProcessing) return;
         resetGame();
-        addLog('ゲームをリセットしました（盤面・メンバーを再生成）');
       };
 
       document.getElementById('btn-random-party').onclick = () => {
