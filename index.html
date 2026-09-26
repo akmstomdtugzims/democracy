@@ -65,11 +65,8 @@
     
     <!-- 1. ヘッダー -->
     <header class="py-1 border-b-2 border-black flex justify-between items-baseline px-2 flex-shrink-0">
-      <div class="flex items-baseline space-x-2">
-        <h1 class="text-base font-black tracking-widest leading-none">ﾃﾞﾓﾏﾁ3</h1>
-        <span class="text-[9px] font-bold tracking-wider text-gray-600">DEMOCRACY MATCH 3 GAME</span>
-      </div>
-      <button id="btn-reopen-clear" class="hidden flat-btn px-2 py-0.5 text-[10px]">クリア</button>
+      <h1 class="text-base font-black tracking-widest leading-none">ﾃﾞﾓﾏﾁ3</h1>
+      <span class="text-[9px] font-bold tracking-wider text-gray-600">DEMOCRACY MATCH 3 GAME</span>
     </header>
 
     <!-- 2. 基本情報エリア -->
@@ -135,25 +132,21 @@
 
   <!-- メンバー選択モーダル -->
   <div id="party-modal" class="hidden fixed inset-0 bg-white z-50 flex flex-col p-3 box-border overflow-y-auto text-black">
-    <div class="border-b-2 border-black pb-1 mb-2 flex-shrink-0 flex justify-between items-start">
-      <div>
-        <h2 class="text-base font-black leading-tight">構成メンバー編成</h2>
-        <div class="text-[10px] font-bold text-gray-700 leading-tight mt-0.5">枠選択→属性選択</div>
-      </div>
-      <button id="modal-btn-back" class="flat-btn-outline px-2 py-0.5 text-xs">閉じる</button>
+    <div class="border-b-2 border-black pb-1 mb-2 flex-shrink-0">
+      <h2 class="text-base font-black leading-tight">構成メンバー編成</h2>
+      <div class="text-[10px] font-bold text-gray-700 leading-tight mt-0.5">枠選択→属性選択</div>
     </div>
 
-    <div class="flex justify-between items-center mb-1 flex-shrink-0">
-      <div class="text-xs font-bold">現在の編成枠:</div>
-      <button id="modal-btn-random" class="flat-btn-outline px-2 py-0.5 text-xs">ランダム</button>
-    </div>
+    <div class="text-xs font-bold mb-1 flex-shrink-0">現在の編成枠:</div>
     <div id="modal-party-slots" class="grid grid-cols-5 gap-1 mb-2 flex-shrink-0"></div>
 
     <div class="text-xs font-bold mb-1 flex-shrink-0">効果:</div>
     <div id="modal-effects-summary" class="text-xs bg-gray-100 p-1 border border-black mb-2 font-bold min-h-[24px] flex-shrink-0">--</div>
 
-    <div class="flex justify-end py-1 mb-2 border-t border-b border-black flex-shrink-0">
-      <button id="modal-btn-confirm" class="flat-btn px-4 py-1 text-xs">決定</button>
+    <div class="flex justify-between space-x-2 py-1 mb-2 border-t border-b border-black flex-shrink-0">
+      <button id="modal-btn-random" class="flat-btn-outline flex-1 py-1 text-xs">ランダム</button>
+      <button id="modal-btn-back" class="flat-btn-outline flex-1 py-1 text-xs">閉じる</button>
+      <button id="modal-btn-confirm" class="flat-btn flex-1 py-1 text-xs">決定</button>
     </div>
 
     <div class="text-xs font-bold mb-1 flex-shrink-0">属性一覧:</div>
@@ -365,15 +358,13 @@
       grid: [],
       party: [],
       citizenCount: 5,
-      pendingResetDemo: false,
       cabinetDecisionTurns: 0,
       enemySkillCounter: 0,
       nextEnemySkill: null,
       logs: [],
       selectedCell: null,
       isProcessing: false,
-      gameEnded: false,
-      lastClearResultArgs: null
+      gameEnded: false
     };
 
     let modalTempParty = [];
@@ -610,11 +601,6 @@
       if (nextMatches.length > 0) {
         await processCascade(comboCount + 1);
       } else {
-        if (gameState.pendingResetDemo) {
-          let initialCitizens = gameState.party.filter(m => m && m.jobId === 'citizen').length;
-          gameState.citizenCount = initialCitizens;
-          gameState.pendingResetDemo = false;
-        }
         await endTurnSequence();
       }
     }
@@ -670,7 +656,6 @@
       let activeSpecialists = gameState.party.filter(m => m && !m.bribed && m.jobId !== 'citizen').length;
       let totalEnemyDmg = 0;
       let totalPlayerHeal = 0;
-      const comboTag = comboCount > 1 ? ` (${comboCount}コンボ)` : '';
 
       Object.keys(typeCounts).forEach(type => {
         let count = typeCounts[type];
@@ -679,12 +664,12 @@
           let dmg = count * BLOCK_TYPES.QUESTION.baseDmg * solidarityMultiplier;
           totalEnemyDmg += dmg;
           gameState.citizenCount = Math.min(10, gameState.citizenCount + 1);
-          addLog(`「疑問」発生${comboTag} 権威-${Math.floor(dmg)}（市民+1）`);
+          addLog(`「疑問」発生 権威-${Math.floor(dmg)}（市民+1）`);
         }
         else if (type === 'report') {
           let dmg = count * BLOCK_TYPES.REPORT.baseDmg * solidarityMultiplier;
           totalEnemyDmg += dmg;
-          addLog(`「報道」発信${comboTag} 権威-${Math.floor(dmg)}`);
+          addLog(`「報道」発信 権威-${Math.floor(dmg)}`);
 
           let reqCount = activeJobs.includes('reporter') ? 3 : 4;
           if (count >= reqCount) {
@@ -694,15 +679,14 @@
         }
         else if (type === 'verify') {
           if (gameState.cabinetDecisionTurns > 0) {
-            addLog(`閣議決定により「検証」無効化中`);
+            addLog(`閣議決定により「検証」無効化中（残${gameState.cabinetDecisionTurns}ターン）`);
           } else {
             let baseDmg = activeJobs.includes('expert') ? 100 : 50;
             let dmg = count * baseDmg * solidarityMultiplier;
             totalEnemyDmg += dmg;
 
-            let removedConceal = removeAllBlocksOfType('conceal');
-            let removedFake = removeAllBlocksOfType('fake');
-            addLog(`「検証」実施${comboTag} 権威-${Math.floor(dmg)}`);
+            removeAllBlocksOfType('fake');
+            addLog(`「検証」実施 権威-${Math.floor(dmg)}`);
 
             if (isBribed('expert')) {
               gameState.enemyHp = Math.min(gameState.enemyMaxHp, gameState.enemyHp + 10);
@@ -716,16 +700,17 @@
           let delayChance = gameState.citizenCount * 0.1;
           if (Math.random() < delayChance) {
             gameState.enemySkillCounter--;
-            addLog(`「署名」提出${comboTag} 権威-${Math.floor(dmg)}（権威行動1T遅延）`);
+            addLog(`「署名」提出 権威-${Math.floor(dmg)}（権威行動1T遅延）`);
           } else {
-            addLog(`「署名」提出${comboTag} 権威-${Math.floor(dmg)} 権威側の行動が1ターン遅延`);
+            addLog(`「署名」提出 権威-${Math.floor(dmg)} 権威側の行動が1ターン遅延`);
           }
         }
         else if (type === 'demo') {
           let dmg = activeSpecialists * gameState.citizenCount * 15 * solidarityMultiplier;
           totalEnemyDmg += dmg;
-          gameState.pendingResetDemo = true;
-          addLog(`「デモ」参加${comboTag} 権威-${Math.floor(dmg)}（市民数リセット）`);
+          let initialCitizens = gameState.party.filter(m => m && m.jobId === 'citizen').length;
+          gameState.citizenCount = initialCitizens;
+          addLog(`「デモ」参加 権威-${Math.floor(dmg)}`);
         }
         else if (type === 'dialogue') {
           if (isBribed('politician')) {
@@ -734,7 +719,7 @@
             let baseHeal = activeJobs.includes('politician') ? 25 : 10;
             let healVal = count * baseHeal * solidarityMultiplier;
             totalPlayerHeal += healVal;
-            addLog(`「対話」成立${comboTag} 気力+${Math.floor(healVal)}`);
+            addLog(`「対話」成立 気力+${Math.floor(healVal)}`);
           }
 
           if (gameState.party.some(m => m && m.bribed)) {
@@ -1002,24 +987,27 @@
         }
       });
 
-      const toZenNum = (num) => String(num).replace(/[0-9]/g, (s) => String.fromCharCode(s.charCodeAt(0) + 0xFEE0));
       let bonusCitizens = Math.max(0, gameState.citizenCount - initialCitizenCount);
+      let totalCitizens = (counts['市民'] || 0) + bonusCitizens;
 
       let countsArr = [];
       Object.keys(counts).forEach(k => {
         if (k === '市民') {
-          let totalCitizens = counts[k] + bonusCitizens;
-          countsArr.push(bonusCitizens > 0 ? `市民${toZenNum(totalCitizens)}（${toZenNum(bonusCitizens)}）` : `市民${toZenNum(counts[k])}`);
+          countsArr.push(bonusCitizens > 0 ? `市民数${totalCitizens}(+${bonusCitizens})` : `市民数${totalCitizens}`);
         } else {
-          countsArr.push(`${k}${toZenNum(counts[k])}`);
+          countsArr.push(`${k}${counts[k]}`);
         }
       });
 
-      if (!counts['市民'] && bonusCitizens > 0) {
-        countsArr.unshift(`市民${toZenNum(bonusCitizens)}（${toZenNum(bonusCitizens)}）`);
+      if (!counts['市民']) {
+        if (bonusCitizens > 0) {
+          countsArr.unshift(`市民数${totalCitizens}(+${bonusCitizens})`);
+        } else {
+          countsArr.unshift(`市民数0`);
+        }
       }
 
-      document.getElementById('party-counts-display').textContent = countsArr.length > 0 ? `属性: ${countsArr.join(' ')}` : '属性: なし';
+      document.getElementById('party-counts-display').textContent = countsArr.length > 0 ? `構成メンバー市民数（+スキル加算市民数）: ${countsArr.join(' ')}` : '構成メンバー市民数（+スキル加算市民数）: 市民数0';
 
       // 構成メンバー効果表示（文字サイズ自動調整）
       let activeEffects = [];
@@ -1107,7 +1095,6 @@
     }
 
     function showResult(isWin, reason) {
-      gameState.lastClearResultArgs = { isWin, reason };
       const modal = document.getElementById('result-modal');
       const titleEl = document.getElementById('result-title');
       const commentEl = document.getElementById('result-comment');
@@ -1196,7 +1183,6 @@
       gameState.enemyMaxHp = 3500;
       gameState.playerHp = 100;
       gameState.playerMaxHp = 100;
-      gameState.pendingResetDemo = false;
       gameState.cabinetDecisionTurns = 0;
       gameState.enemySkillCounter = 0;
       gameState.nextEnemySkill = ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
@@ -1204,7 +1190,6 @@
       gameState.selectedCell = null;
       gameState.isProcessing = false;
       gameState.gameEnded = false;
-      gameState.lastClearResultArgs = null;
 
       if (gameState.party) gameState.party.forEach(m => { if (m) m.bribed = false; });
 
@@ -1215,7 +1200,6 @@
       addLog('ゲーム開始：ブロックを操作して権威を減らそう');
 
       document.getElementById('result-modal').classList.add('hidden');
-      document.getElementById('btn-reopen-clear').classList.add('hidden');
     }
 
     /* ==========================================================================
@@ -1273,20 +1257,7 @@
       };
 
       document.getElementById('log-modal-close').onclick = () => document.getElementById('log-modal').classList.add('hidden');
-      
-      document.getElementById('result-close-x').onclick = () => {
-        document.getElementById('result-modal').classList.add('hidden');
-        if (gameState.lastClearResultArgs) {
-          document.getElementById('btn-reopen-clear').classList.remove('hidden');
-        }
-      };
-
-      document.getElementById('btn-reopen-clear').onclick = () => {
-        if (gameState.lastClearResultArgs) {
-          showResult(gameState.lastClearResultArgs.isWin, gameState.lastClearResultArgs.reason);
-        }
-      };
-
+      document.getElementById('result-close-x').onclick = () => document.getElementById('result-modal').classList.add('hidden');
       document.getElementById('result-retry-btn').onclick = () => resetGame();
 
       document.getElementById('result-select-party-btn').onclick = () => {
@@ -1296,7 +1267,7 @@
         while (modalTempParty.length < 5) modalTempParty.push(null);
         modalSelectedSlotIndex = 0;
         setupPartyModal();
-        document.getElementById('party-modal').classList.remove('hidden');
+        document.getElementById('party-modal').classList.add('hidden');
       };
     };
   </script>
