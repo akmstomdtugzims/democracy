@@ -744,7 +744,7 @@
 
 
         } else if (type === 'demo') {
-          let dmg = activeSpecialists * gameState.citizenCount * ２ * solidarityMultiplier;
+          let dmg = activeSpecialists * gameState.citizenCount * 20 * solidarityMultiplier;
           totalEnemyDmg += dmg;
           gameState.pendingDemoReset = true;
           addLog(`${prefix}「デモ」参加 権威-${Math.floor(dmg)}`);
@@ -1018,13 +1018,13 @@
       let isGutted = (jobId) => gameState.party.find(m => m && m.jobId === jobId)?.Gutted || false;
       if (isGutted('expert')) activeEffects.push('検証で権威+10');
       if (isGutted('lawyer')) activeEffects.push('毎ターン虚偽+1');
-      if (isGutted('reporter')) activeEffects.push('毎ターン虚偽+1');
+      if (isGutted('reporter')) activeEffects.push('毎ターン報道→虚偽');
 
       let cappedCitizens = Math.min(gameState.citizenCount, 10);
       if (cappedCitizens > 0) activeEffects.push(`全体効果+${cappedCitizens * 10}%`);
       if (activeJobs.includes('expert')) activeEffects.push('毎ターン虚偽-1');
       if (activeJobs.includes('lawyer')) activeEffects.push('毎ターン非開示-1');
-      if (activeJobs.includes('reporter')) activeEffects.push('報道効果UP');
+      if (activeJobs.includes('reporter')) activeEffects.push('報道必要数-1');
       if (activeJobs.includes('politician')) activeEffects.push('対話効果UP');
       if (gameState.cabinetDecisionTurns > 0) activeEffects.push(`「検証」無効(${gameState.cabinetDecisionTurns}T)`);
 
@@ -1088,7 +1088,7 @@
       if (cappedTempCitizens > 0) activeEffects.push(`全体効果+${cappedTempCitizens * 10}%`);
       if (tempJobs.includes('expert')) activeEffects.push('毎ターン虚偽-1');
       if (tempJobs.includes('lawyer')) activeEffects.push('毎ターン非開示-1');
-      if (tempJobs.includes('reporter')) activeEffects.push('報道効果UP');
+      if (tempJobs.includes('reporter')) activeEffects.push('報道必要数-1');
       if (tempJobs.includes('politician')) activeEffects.push('対話効果UP');
 
       document.getElementById('modal-effects-summary').textContent = activeEffects.join(' / ') || '';
