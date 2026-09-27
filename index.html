@@ -158,7 +158,7 @@
       <div>📢 <b>報道</b>: 権威-50 / 「虚偽」を「疑問」に変換（4以上連結）</div>
       <div>🔍 <b>検証</b>: 権威-50 / 「非開示」or「虚偽」を無効化・削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
-      <div>🪧 <b>デモ</b>: 権威- (市民×専門職×15) ※市民数加算初期化</div>
+      <div>🪧 <b>デモ</b>: 権威- (市民×専門職×100) ※市民数加算初期化</div>
       <div>🤝 <b>対話</b>: 気力+10 / 骨抜き状態解除</div>
       <div><b>虚偽</b>: 気力-10</div>
       <div><b>非開示</b>: 削除不可</div>
@@ -228,7 +228,7 @@
 
     const JOBS = {
       citizen:    { id: 'citizen',    name: '市民',   skillName: '連帯',         desc: '市民数が増えるほど全体効果UP', boostBlock: 'question', icons: ['🧑‍💼', '👨‍💼', '👩‍🍳', '🧑‍🌾', '🧑‍🎨'] },
-      reporter:   { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」スキル必要ブロック-1・効果UP', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
+      reporter:   { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」スキル必要ブロック減', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
       expert:     { id: 'expert',     name: '専門家', skillName: '客観性の担保',   desc: '毎ターン「虚偽」1訂正', boostBlock: 'verify', icons: ['👩‍💻', '🧑‍💻'] },
       lawyer:     { id: 'lawyer',     name: '弁護士', skillName: '社会正義の実現', desc: '毎ターン「非開示」or「虚偽」1解除', boostBlock: 'sign', icons: ['👩‍⚖️', '👨‍⚖️'] },
       politician: { id: 'politician', name: '政治家', skillName: '公共の福祉',     desc: '「対話」効果UP', boostBlock: 'dialogue', icons: ['👩‍💼', '👨‍💼'] }
@@ -682,6 +682,7 @@
           totalEnemyDmg += dmg;
           gameState.citizenCount = Math.min(10, gameState.citizenCount + 1);
           addLog(`${prefix}「疑問」発露 権威-${Math.floor(dmg)}（市民+1）`);
+
         } else if (type === 'report') {
           let dmg = count * 50 * solidarityMultiplier;
           totalEnemyDmg += dmg;
@@ -694,7 +695,7 @@
           if (gameState.cabinetDecisionTurns > 0) {
             addLog(`閣議決定により「検証」無効化中`);
           } else {
-            let dmg = count * (activeJobs.includes('expert') ? 100 : 50) * solidarityMultiplier;
+            let dmg = count * 50　* solidarityMultiplier;
             totalEnemyDmg += dmg;
 
             let hasConceal = false;
@@ -740,11 +741,15 @@
           );
 
           addLog(`${prefix}「署名」提出 権威-${Math.floor(dmg)} 権威側の行動を1ターン遅延`);
+
+
         } else if (type === 'demo') {
-          let dmg = activeSpecialists * gameState.citizenCount * 15 * solidarityMultiplier;
+          let dmg = activeSpecialists * gameState.citizenCount * 100 * solidarityMultiplier;
           totalEnemyDmg += dmg;
           gameState.pendingDemoReset = true;
           addLog(`${prefix}「デモ」参加 権威-${Math.floor(dmg)}`);
+
+
         } else if (type === 'dialogue') {
           if (isGutted('politician')) {
             addLog(`政治家(保身)：対話回復量0`);
@@ -1013,13 +1018,13 @@
       let isGutted = (jobId) => gameState.party.find(m => m && m.jobId === jobId)?.Gutted || false;
       if (isGutted('expert')) activeEffects.push('検証で権威+10');
       if (isGutted('lawyer')) activeEffects.push('毎ターン虚偽+1');
-      if (isGutted('reporter')) activeEffects.push('毎ターン報道→虚偽');
+      if (isGutted('reporter')) activeEffects.push('毎ターン虚偽+1');
 
       let cappedCitizens = Math.min(gameState.citizenCount, 10);
       if (cappedCitizens > 0) activeEffects.push(`全体効果+${cappedCitizens * 10}%`);
       if (activeJobs.includes('expert')) activeEffects.push('毎ターン虚偽-1');
       if (activeJobs.includes('lawyer')) activeEffects.push('毎ターン非開示-1');
-      if (activeJobs.includes('reporter')) activeEffects.push('報道必要数-1');
+      if (activeJobs.includes('reporter')) activeEffects.push('報道効果UP');
       if (activeJobs.includes('politician')) activeEffects.push('対話効果UP');
       if (gameState.cabinetDecisionTurns > 0) activeEffects.push(`「検証」無効(${gameState.cabinetDecisionTurns}T)`);
 
@@ -1083,7 +1088,7 @@
       if (cappedTempCitizens > 0) activeEffects.push(`全体効果+${cappedTempCitizens * 10}%`);
       if (tempJobs.includes('expert')) activeEffects.push('毎ターン虚偽-1');
       if (tempJobs.includes('lawyer')) activeEffects.push('毎ターン非開示-1');
-      if (tempJobs.includes('reporter')) activeEffects.push('報道必要数-1');
+      if (tempJobs.includes('reporter')) activeEffects.push('報道効果UP');
       if (tempJobs.includes('politician')) activeEffects.push('対話効果UP');
 
       document.getElementById('modal-effects-summary').textContent = activeEffects.join(' / ') || '';
