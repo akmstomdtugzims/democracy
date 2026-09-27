@@ -158,7 +158,7 @@
       <div>📢 <b>報道</b>: 権威-50 / 「虚偽」を「疑問」に変換（4以上連結）</div>
       <div>🔍 <b>検証</b>: 権威-50 / 「非開示」or「虚偽」を無効化・削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
-      <div>🪧 <b>デモ</b>: 権威- (市民×専門職×20) ※市民数加算初期化</div>
+      <div>🪧 <b>デモ</b>: 権威- (市民×専門職×20)+1 ※市民数加算初期化</div>
       <div>🤝 <b>対話</b>: 気力+10 / 骨抜き状態解除</div>
       <div><b>虚偽</b>: 気力-10</div>
       <div><b>非開示</b>: 削除不可</div>
@@ -218,7 +218,7 @@
       REPORT:   { id: 'report',   name: '報道', icon: '📢', bg: '#F3EDC4', text: '#ffffff', baseDmg: 50 },
       VERIFY:   { id: 'verify',   name: '検証', icon: '🔍', bg: '#BFFCE8', text: '#ffffff', baseDmg: 50 },
       SIGN:     { id: 'sign',     name: '署名', icon: '📜', bg: '#C0E2FC', text: '#000000', baseDmg: 50 },
-      DEMO:     { id: 'demo',     name: 'デモ', icon: '🪧', bg: '#FCD9BF', text: '#ffffff', baseDmg: 0 },
+      DEMO:     { id: 'demo',     name: 'デモ', icon: '🪧', bg: '#FCD9BF', text: '#ffffff', baseDmg: 1 },
       DIALOGUE: { id: 'dialogue', name: '対話', icon: '🤝', bg: '#FCBFD4', text: '#000000', baseDmg: 0 },
       FAKE:     { id: 'fake',     name: '虚偽', label: '虚偽', bg: '#758b9f', text: '#ffffff', baseDmg: 0 },
       CONCEAL:  { id: 'conceal',  name: '非開示', label: '非開示', bg: '#18181b', text: '#ffffff', baseDmg: 0 }
