@@ -51,9 +51,9 @@
 </head>
 <body class="flex justify-center items-center h-screen w-screen overflow-hidden bg-white">
 
-  <!-- ========================================== -->
+  <!-- ================================================================= -->
   <!-- 1. ゲームメイン画面（ヘッダー・ステータス・盤面） -->
-  <!-- ========================================== -->
+  <!-- ================================================================= -->
   <div id="game-container" class="w-full max-w-md h-full flex flex-col justify-between p-2 box-border bg-white text-black relative select-none">
     
     <header class="py-1 border-b-2 border-black flex justify-between items-baseline px-2 flex-shrink-0">
@@ -122,9 +122,9 @@
 
   </div>
 
-  <!-- ========================================== -->
-  <!-- 2. モーダル（編成 / 履歴 / リザルト） -->
-  <!-- ========================================== -->
+  <!-- ================================================================= -->
+  <!-- 2. モーダル画面（編成 / 履歴 / リザルト） -->
+  <!-- ================================================================= -->
 
   <!-- メンバー編成モーダル -->
   <div id="party-modal" class="hidden fixed inset-0 bg-white z-50 flex flex-col p-3 box-border overflow-y-auto text-black">
@@ -204,13 +204,15 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
+  <!-- ================================================================= -->
   <!-- 3. ゲームプログラム（スクリプト部） -->
-  <!-- ========================================== -->
+  <!-- ================================================================= -->
   <script>
+    // -----------------------------------------------------------------
+    // [定数定義 & マスターデータ]
+    // -----------------------------------------------------------------
     const GRID_SIZE = 6;
 
-    // --- ブロック定義 ---
     const BLOCK_TYPES = {
       QUESTION: { id: 'question', name: '疑問', icon: '💬', bg: '#CEC4FD', text: '#000000', baseDmg: 50 },
       REPORT:   { id: 'report',   name: '報道', icon: '📢', bg: '#F3EDC4', text: '#ffffff', baseDmg: 50 },
@@ -224,7 +226,6 @@
 
     const BASIC_BLOCK_KEYS = ['question', 'report', 'verify', 'sign', 'demo', 'dialogue'];
 
-    // --- 属性 ---
     const JOBS = {
       citizen:    { id: 'citizen',    name: '市民',   skillName: '連帯',         desc: '市民数が増えるほど全体効果UP', boostBlock: 'question', icons: ['🧑‍💼', '👨‍💼', '👩‍🍳', '🧑‍🌾', '🧑‍🎨'] },
       reporter:   { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」スキル必要ブロック-1・効果UP', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
@@ -233,7 +234,9 @@
       politician: { id: 'politician', name: '政治家', skillName: '公共の福祉',     desc: '「対話」効果UP', boostBlock: 'dialogue', icons: ['👩‍💼', '👨‍💼'] }
     };
 
-    // --- 敵スキル ---
+    // -----------------------------------------------------------------
+    // [敵スキル定義]
+    // -----------------------------------------------------------------
     const ENEMY_SKILLS = [
       {
         id: 'spin_report',
@@ -315,9 +318,11 @@
             }
           }
           addLog(`${this.name}発生。2×2の範囲が「虚偽」に変化`, true);
+          renderGrid();
           await checkInstantFakeMatch(state);
         }
-      },      {
+      },
+      {
         id: 'cabinet_decision',
         name: '独断内閣：【閣議決定】',
         description: '「検証」を2ターン無効化',
@@ -329,7 +334,9 @@
       }
     ];
 
-    // --- ゲーム全体データ（状態変数） ---
+    // -----------------------------------------------------------------
+    // [ゲーム状態変数 (State)]
+    // -----------------------------------------------------------------
     let gameState = {
       turnsLeft: 20,
       score: 0,
@@ -355,10 +362,16 @@
     let modalSelectedSlotIndex = 0;
     let touchStartInfo = null;
 
-    // --- ユーティリティ関数 ---
+    // -----------------------------------------------------------------
+    // [ユーティリティ関数]
+    // -----------------------------------------------------------------
     function getRandomIcon(jobId) {
       const icons = JOBS[jobId].icons;
       return icons[Math.floor(Math.random() * icons.length)];
+    }
+
+    function getRandomEnemySkill() {
+      return ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
     }
 
     function createBlock(typeKey) {
@@ -397,7 +410,9 @@
       return 2;
     }
 
-    // --- グリッド・パズル系処理 ---
+    // -----------------------------------------------------------------
+    // [盤面・パズル生成・マッチ判定処理]
+    // -----------------------------------------------------------------
     function initGrid() {
       let valid = false;
       while (!valid) {
@@ -470,10 +485,21 @@
           }
         }
       }
+
       if (matchedCoords.size > 0) {
+        const matchesArray = Array.from(matchedCoords).map(coord => {
+          const [r, c] = coord.split(',').map(Number);
+          return { r, c };
+        });
+        
+        renderGrid();
+        highlightMatches(matchesArray);
+        await new Promise(res => setTimeout(res, 500));
+
         let playerDmg = matchedCoords.size * 10;
         state.playerHp = Math.max(0, state.playerHp - playerDmg);
-        addLog(`「虚偽」受容 気力-${playerDmg}`, true);
+        addLog(`「虚偽」蔓延 気力-${playerDmg}`, true);
+
         matchedCoords.forEach(coord => {
           const [r, c] = coord.split(',').map(Number);
           state.grid[r][c] = null;
@@ -634,7 +660,9 @@
       }
     }
 
-    // --- スキル・効果適用ロジック ---
+    // -----------------------------------------------------------------
+    // [スキル適用・効果計算]
+    // -----------------------------------------------------------------
     function applyMatchSkills(typeCounts, totalMatchCount, comboCount) {
       let activeJobs = gameState.party.filter(m => m && !m.Gutted).map(m => m.jobId);
       let isGutted = (jobId) => gameState.party.find(m => m && m.jobId === jobId)?.Gutted || false;
@@ -771,7 +799,9 @@
       return count;
     }
 
-    // --- ターン終了処理 ---
+    // -----------------------------------------------------------------
+    // [ターン進行・敵行動実行]
+    // -----------------------------------------------------------------
     async function endTurnSequence() {
       if (gameState.cabinetDecisionTurns > 0) {
         gameState.cabinetDecisionTurns--;
@@ -841,9 +871,6 @@
     }
 
     async function triggerEnemySkill() {
-      if (!gameState.nextEnemySkill) {
-        gameState.nextEnemySkill = ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
-      }
       let skill = gameState.nextEnemySkill;
       
       await skill.execute(gameState);
@@ -852,7 +879,8 @@
         gameState.playerHp = Math.max(0, gameState.playerHp - skill.playerDamage);
       }
 
-      gameState.nextEnemySkill = ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
+      // 次回実行するスキルを確定・更新
+      gameState.nextEnemySkill = getRandomEnemySkill();
 
       renderGrid();
       updateUI();
@@ -877,7 +905,9 @@
       }
     }
 
-    // --- UI描画・画面更新系 ---
+    // -----------------------------------------------------------------
+    // [UI描画 & 画面更新]
+    // -----------------------------------------------------------------
     function renderGrid() {
       const gridEl = document.getElementById('puzzle-grid');
       gridEl.innerHTML = '';
@@ -946,8 +976,7 @@
       document.getElementById('player-hp-bar').style.width = `${Math.max(0, (gameState.playerHp / gameState.playerMaxHp) * 100)}%`;
 
       const intentEl = document.getElementById('enemy-intent-display');
-      if (intentEl) {
-        if (!gameState.nextEnemySkill) gameState.nextEnemySkill = ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
+      if (intentEl && gameState.nextEnemySkill) {
         let turnsLeftToSkill = gameState.enemySkillCountdown;
         const text = `次行動: ${turnsLeftToSkill}ターン後 ${gameState.nextEnemySkill.name}（${gameState.nextEnemySkill.description}）`;
         intentEl.textContent = text;
@@ -1025,7 +1054,9 @@
       }
     }
 
-    // --- モーダル・リザルト処理 ---
+    // -----------------------------------------------------------------
+    // [モーダル制御 & リザルト表示]
+    // -----------------------------------------------------------------
     function setupPartyModal() {
       document.getElementById('modal-party-slots').innerHTML = modalTempParty.map((m, idx) => {
         const job = m ? JOBS[m.jobId] : null;
@@ -1078,7 +1109,6 @@
         titleEl.textContent = 'CLEAR';
         commentEl.textContent = `【主権の確立】\n\n権威への依存と服従を脱し、自分たちの手で社会を設計する基盤が整いました。\n\nさあ、次は画面の外で。`;
         retryBtn.textContent = 'もう一度';
-        gameState.lastWinState = { isWin, reason, puzzleScore, turnBonus, hpBonus, finalScore, turnsLeft: gameState.turnsLeft, playerHp: gameState.playerHp };
       } else {
         titleEl.textContent = 'GAME OVER';
         commentEl.textContent = (reason === 'hp0')
@@ -1086,6 +1116,8 @@
           : `【抑圧の継続】\n\n声は日常の雑音へと消え、誰も何も語らなくなりました。`;
         retryBtn.textContent = 'あきらめない';
       }
+
+gameState.lastWinState = { isWin, reason, puzzleScore, turnBonus, hpBonus, finalScore, turnsLeft: gameState.turnsLeft, playerHp: gameState.playerHp };
 
       let shareText = isWin
         ? `【CLEAR】社会を自分たちで決めていく準備が整いました (スコア: ${finalScore.toLocaleString()}) #ﾃﾞﾓﾏﾁ3`
@@ -1145,7 +1177,7 @@
       gameState.playerMaxHp = 100;
       gameState.cabinetDecisionTurns = 0;
       gameState.enemySkillCountdown = getRequiredEnemySkillCounter();
-      gameState.nextEnemySkill = ENEMY_SKILLS[Math.floor(Math.random() * ENEMY_SKILLS.length)];
+      gameState.nextEnemySkill = getRandomEnemySkill();
       gameState.logs = [];
       gameState.selectedCell = null;
       gameState.isProcessing = false;
@@ -1164,7 +1196,9 @@
       document.getElementById('result-modal').classList.add('hidden');
     }
 
-    // --- イベントリスナー初期設定 ---
+    // -----------------------------------------------------------------
+    // [初期化・イベントハンドラー設定]
+    // -----------------------------------------------------------------
     window.onload = function() {
       resetGame();
 
