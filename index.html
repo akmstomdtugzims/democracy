@@ -385,8 +385,8 @@
 
 if (weights['demo'] !== undefined) {
     const citizen = gameState.citizenCount || 0;
-    if (citizen <= 2) {
-      weights['demo'] = 30;  // 低（市民数0〜2）
+    if (citizen <= 1) {
+      weights['demo'] = 30;  // 低（市民数0〜1）
     } else if (citizen <= 3) {
       weights['demo'] = 100; // 中（市民数～3）
     } else {
