@@ -154,7 +154,7 @@
 
     <div class="border-t border-black pt-1.5 mb-1 text-[11px] space-y-0.5 bg-gray-50 p-1.5 border flex-shrink-0">
       <div class="font-bold border-b border-gray-300 pb-0.5 mb-0.5">【ブロック概要】</div>
-      <div>💬 <b>疑問</b>: 権威-50 / 市民数加算（上限10） </div>
+      <div>💬 <b>疑問</b>: 権威-20 / 市民数加算（上限10） </div>
       <div>📢 <b>報道</b>: 権威-50 / 「虚偽」を「疑問」に変換（4以上連結）</div>
       <div>🔍 <b>検証</b>: 権威-50 / 「非開示」or「虚偽」を無効化・削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
@@ -214,7 +214,7 @@
     const GRID_SIZE = 6;
 
     const BLOCK_TYPES = {
-      QUESTION: { id: 'question', name: '疑問', icon: '💬', bg: '#CEC4FD', text: '#000000', baseDmg: 50 },
+      QUESTION: { id: 'question', name: '疑問', icon: '💬', bg: '#CEC4FD', text: '#000000', baseDmg: 20 },
       REPORT:   { id: 'report',   name: '報道', icon: '📢', bg: '#F3EDC4', text: '#ffffff', baseDmg: 50 },
       VERIFY:   { id: 'verify',   name: '検証', icon: '🔍', bg: '#BFFCE8', text: '#ffffff', baseDmg: 50 },
       SIGN:     { id: 'sign',     name: '署名', icon: '📜', bg: '#C0E2FC', text: '#000000', baseDmg: 50 },
@@ -382,6 +382,18 @@
       const activeParty = gameState.party.filter(m => m && !m.Gutted);
       let weights = {};
       BASIC_BLOCK_KEYS.forEach(k => weights[k] = 100);
+
+if (weights['demo'] !== undefined) {
+    const citizen = gameState.citizenCount || 0;
+    if (citizen <= 2) {
+      weights['demo'] = 30;  // 低（市民数0〜2）
+    } else if (citizen <= 3) {
+      weights['demo'] = 100; // 中（市民数～3）
+    } else {
+      weights['demo'] = 200; // 高（市民数4以上）
+    }
+  }
+
       activeParty.forEach(m => {
         const boostKey = JOBS[m.jobId].boostBlock;
         if (weights[boostKey] !== undefined) weights[boostKey] += 18;
@@ -622,7 +634,7 @@
         if (gameState.pendingDemoReset) {
           gameState.citizenCount = gameState.party.filter(m => m && m.jobId === 'citizen').length;
           gameState.pendingDemoReset = false;
-          addLog(`「デモ」終了 市民数加算初期化`);
+          addLog(`「デモ」終了 集まっていた市民が解散した`);
         }
         await endTurnSequence();
       }
@@ -695,9 +707,10 @@
           if (gameState.cabinetDecisionTurns > 0) {
             addLog(`閣議決定により「検証」無効化中`);
           } else {
-            let dmg = count * 50　* solidarityMultiplier;
-            totalEnemyDmg += dmg;
-
+           let dmg = count * 50 * solidarityMultiplier;
+                 if (isGutted('expert')) {
+                  dmg = 0;
+                 }
             let hasConceal = false;
             let hasFake = false;
             for (let r = 0; r < GRID_SIZE; r++) {
@@ -719,7 +732,7 @@
               removedCount = removeAllBlocksOfTypes([targetType]);
             }
 
-            let typeLabel = targetType === 'conceal' ? '非開示' : (targetType === 'fake' ? '虚偽' : '');
+            let typeLabel = targetType === 'conceal' ? '　非開示' : (targetType === 'fake' ? '　虚偽' : '');
             let removeLogText = removedCount > 0 ? `${typeLabel}${removedCount}消去` : '';
 
             addLog(`${prefix}「検証」実施 権威-${Math.floor(dmg)}${removeLogText}`);
@@ -740,7 +753,7 @@
             gameState.enemySkillCountdown + 1
           );
 
-          addLog(`${prefix}「署名」提出 権威-${Math.floor(dmg)} 権威側の行動を1ターン遅延`);
+          addLog(`${prefix}「署名」提出 権威-${Math.floor(dmg)}　権威側の行動を1ターン遅延`);
 
 
         } else if (type === 'demo') {
@@ -768,6 +781,7 @@
           addLog(`${prefix}「虚偽」受容 気力-${playerDmg}`, true);
         }
       });
+
 
       if (totalEnemyDmg > 0) gameState.enemyHp = Math.max(0, gameState.enemyHp - Math.floor(totalEnemyDmg));
       if (totalPlayerHeal > 0) gameState.playerHp = Math.min(gameState.playerMaxHp, gameState.playerHp + Math.floor(totalPlayerHeal));
@@ -848,6 +862,11 @@
           gameState.grid[pt.r][pt.c] = getRandomBlockByDropRate();
           addLog(`弁護士：【社会正義の実現】「虚偽」を1除去`);
         }
+                   renderGrid(); 
+               await checkInstantFakeMatch(gameState);
+               if (checkMatches(gameState.grid).length > 0) {
+                 await processCascade(1);
+               }
       }
 
       await checkInstantFakeMatch(gameState);
@@ -884,7 +903,6 @@
         gameState.playerHp = Math.max(0, gameState.playerHp - skill.playerDamage);
       }
 
-      // 次回実行するスキルを確定・更新
       gameState.nextEnemySkill = getRandomEnemySkill();
 
       renderGrid();
