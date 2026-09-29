@@ -159,7 +159,7 @@
       <div>🔍 <b>検証</b>: 権威-50 / 「非開示」or「虚偽」を無効化・削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
       <div>🪧 <b>デモ</b>: 権威- (市民×専門職×20) ※市民数加算初期化</div>
-      <div>🤝 <b>対話</b>: 気力+10 / 骨抜き状態解除</div>
+      <div>🤝 <b>対話</b>: 気力+5 / 骨抜き状態解除</div>
       <div><b>虚偽</b>: 気力-10</div>
       <div><b>非開示</b>: 削除不可</div>
     </div>
@@ -242,10 +242,10 @@
         id: 'spin_report',
         name: '捏造報道局：【スピン報道】',
         description: '盤面シャッフル',
-        playerDamage: 20,
+        playerDamage: 10,
         execute(state) {
           shuffleGrid(state);
-          addLog(`${this.name}気力-20 盤面シャッフル`, true);
+          addLog(`${this.name}気力-10 盤面シャッフル`, true);
         }
       },
       {
@@ -271,7 +271,7 @@
         id: 'withhold_answer',
         name: '隠蔽議員：【答弁は差し控えさせていただきます】',
         description: '4ブロックを「非開示」に変換',
-        playerDamage: 20,
+        playerDamage: 10,
         execute(state) {
           let coords = [];
           for (let r = 0; r < GRID_SIZE; r++) {
@@ -281,18 +281,18 @@
           }
           coords.sort(() => Math.random() - 0.5);
           coords.slice(0, 4).forEach(pt => { state.grid[pt.r][pt.c] = createBlock('conceal'); });
-          addLog(`${this.name}気力-20 4ブロックを「非開示」に変換`, true);
+          addLog(`${this.name}気力-10 4ブロックを「非開示」に変換`, true);
         }
       },
       {
         id: 'bribery',
         name: '懐柔工作班：【骨抜き】',
         description: 'メンバー2名を骨抜き状態にする',
-        playerDamage: 20,
+        playerDamage: 10,
         execute(state) {
           let unGutted = state.party.map((m, idx) => ({ m, idx })).filter(item => item.m && !item.m.Gutted);
           if (unGutted.length === 0) {
-            addLog(`${this.name}気力-20 しかし骨抜き対象がいなかった`, true);
+            addLog(`${this.name}気力-10 しかし骨抜き対象がいなかった`, true);
             return;
           }
           unGutted.sort(() => Math.random() - 0.5);
@@ -301,7 +301,7 @@
             state.party[item.idx].Gutted = true;
             return JOBS[state.party[item.idx].jobId].name;
           });
-          addLog(`${this.name}気力-20 ${targetNames.join('・')}が骨抜きにされた（「対話」で解除）`, true);
+          addLog(`${this.name}気力-10 ${targetNames.join('・')}が骨抜きにされた（「対話」で解除）`, true);
         }
       },
       {
@@ -326,10 +326,10 @@
         id: 'cabinet_decision',
         name: '独断内閣：【閣議決定】',
         description: '「検証」を2ターン無効化',
-        playerDamage: 25,
+        playerDamage: 15,
         execute(state) {
           state.cabinetDecisionTurns = 2;
-          addLog(`${this.name}:気力-25 「検証」を無効化（2ターン継続）`, true);
+          addLog(`${this.name}:気力-15 「検証」を無効化（2ターン継続）`, true);
         }
       }
     ];
