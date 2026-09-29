@@ -767,7 +767,7 @@ if (weights['demo'] !== undefined) {
           if (isGutted('politician')) {
             addLog(`政治家(保身)：対話回復量0`);
           } else {
-            let healVal = count * (activeJobs.includes('politician') ? 25 : 10) * solidarityMultiplier;
+            let healVal = count * (activeJobs.includes('politician') ? 10 : 5) * solidarityMultiplier;
             totalPlayerHeal += healVal;
             addLog(`${prefix}「対話」成立 気力+${Math.floor(healVal)}`);
           }
