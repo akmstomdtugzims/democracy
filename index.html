@@ -700,8 +700,8 @@
           totalEnemyDmg += dmg;
           addLog(`${prefix}「報道」発信 権威-${Math.floor(dmg)}`);
           if (count >= (activeJobs.includes('reporter') ? 3 : 4)){
-            let converted = convertRandomBlocks('conceal', 'question', 1);
-            if (converted > 0) addLog(`${prefix}「報道」追求　「非開示」1個を「疑問」に変換`);
+            let converted = convertRandomBlocks('conceal', 'question', 36);
+            if (converted > 0) addLog(`${prefix}「報道」追求　「非開示」を「疑問」に変換`);
           }
 
         } else if (type === 'verify'){
