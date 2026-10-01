@@ -155,8 +155,8 @@
     <div class="border-t border-black pt-1.5 mb-1 text-[11px] space-y-0.5 bg-gray-50 p-1.5 border flex-shrink-0">
       <div class="font-bold border-b border-gray-300 pb-0.5 mb-0.5">【ブロック概要】</div>
       <div>💬 <b>疑問</b>: 権威-20 / 市民数加算（上限10） </div>
-      <div>📢 <b>報道</b>: 権威-50 / 「非開示」を「疑問」に変換（4連結）</div>
-      <div>🔍 <b>検証</b>: 権威-50 / 「虚偽」を無効化して削除</div>
+      <div>📢 <b>報道</b>: 権威-50 / 「虚偽」を「疑問」に変換（4連結）</div>
+      <div>🔍 <b>検証</b>: 権威-50 / 「非開示を無効化して削除</div>
       <div>📜 <b>署名</b>: 権威-50 / 権威側の行動を1ターン遅延</div>
       <div>🪧 <b>デモ</b>: 権威- (市民×専門職×20) ※市民数加算初期化</div>
       <div>🤝 <b>対話</b>: 気力+5 / 骨抜き状態解除</div>
@@ -695,15 +695,15 @@
           gameState.citizenCount = Math.min(10, gameState.citizenCount + 1);
           addLog(`${prefix}「疑問」発露 権威-${Math.floor(dmg)}（市民+1）`);
 
-        }  else if (type === 'report') {
-    let dmg = count * 50 * solidarityMultiplier;
-    totalEnemyDmg += dmg;
-    addLog(`${prefix}「報道」発信 権威-${Math.floor(dmg)}`);
-    if (count >= (activeJobs.includes('reporter') ? 3 : 4)) {
-      let converted = convertRandomBlocks('conceal', 'question', 1);
-      if (converted > 0) addLog(`${prefix}記者：【報道の自由】「非開示」1個を「疑問」に変換`);
+        } else if (type === 'report') {
+          let dmg = count * 50 * solidarityMultiplier;
+          totalEnemyDmg += dmg;
+          addLog(`${prefix}「報道」発信 権威-${Math.floor(dmg)}`);
+          if (count >= (activeJobs.includes('reporter') ? 3 : 4)) {
+          let converted = convertRandomBlocks('conceal', 'question', 1);
+          if (converted > 0) addLog(`${prefix}記者：【報道の自由】「非開示」1個を「疑問」に変換`);
     }
-          }
+
         } else if (type === 'verify') {
           if (gameState.cabinetDecisionTurns > 0) {
             addLog(`閣議決定により「検証」無効化中`);
