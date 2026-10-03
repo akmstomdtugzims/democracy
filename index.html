@@ -378,7 +378,7 @@
       if(weights['demo'] !== undefined){
         const citizen = gameState.citizenCount || 0;
         if(citizen <= 1){
-          weights['demo'] = 30;
+          weights['demo'] = 70;
         } else if(citizen <= 3){
           weights['demo'] = 100;
         } else{
@@ -690,12 +690,10 @@
           let dmg = count * 50 * solidarityMultiplier;
           totalEnemyDmg += dmg;
           addLog(`${prefix}「報道」発信 権威-${Math.floor(dmg)}`);
+          
           if(count >=(activeJobs.includes('reporter') ? 3 : 4)){
             let converted = convertRandomBlocks('conceal', 'question', 36);
             if(converted > 0) addLog(`${prefix}「報道」追求 「非開示」を「疑問」に変換`);
-            needCascadeCheck = true;
-          }else{
-           needCascadeCheck = false;
           }
 
         } else if(type === 'verify'){
@@ -756,25 +754,42 @@
         }
       }
       await getRandomBlockByDropRate();
-      if (needCascadeCheck) {
-        await matchedBlocksByType();
-        }else{
-        gameState.isProcessing = false;
-      }
 
       if(totalEnemyDmg > 0) gameState.enemyHp = Math.max(0, gameState.enemyHp - Math.floor(totalEnemyDmg));
       if(totalPlayerHeal > 0) gameState.playerHp = Math.min(gameState.playerMaxHp, gameState.playerHp + Math.floor(totalPlayerHeal));
-      
-      if(needCascadeCheck) {
-        renderGrid();
-        if(typeof checkInstantFakeMatch === 'function') {
-          await checkInstantFakeMatch(gameState);
-        }
-        if(checkMatches(gameState.grid).length > 0) {
-          await processCascade(comboCount + 1);
+
+      let matches = checkMatches(gameState.grid);
+      if (matches.length > 0) {
+        matches.forEach(({ r, c }) => {
+          gameState.grid[r][c] = null;
+        });
+        
+        for (let c = 0; c < GRID_SIZE; c++) {
+          for (let r = GRID_SIZE - 1; r >= 0; r--) {
+            if (gameState.grid[r][c] === null) {
+              for (let above = r - 1; above >= 0; above--) {
+                if (gameState.grid[above][c] !== null) {
+                  gameState.grid[r][c] = gameState.grid[above][c];
+                  gameState.grid[above][c] = null;
+                  break;
+                }
+              }
+              if (gameState.grid[r][c] === null) {
+                gameState.grid[r][c] = getRandomBlockByDropRate();
+              }
+            }
+          }
         }
       }
-    }
+
+      renderGrid();
+      
+      if(checkMatches(gameState.grid).length > 0) {
+        await processCascade(comboCount + 1);
+      } else {
+        gameState.isProcessing = false;
+      }
+        }
 
     function convertRandomBlocks(fromType, toType, maxCount){
       let targets = [];
