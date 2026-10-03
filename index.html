@@ -333,7 +333,7 @@
         id: 'Intimidation',
         name: '脅迫議員【インフラ予算カット】',
         description: '市民数の減少',
-        playerDamage: 20,
+        playerDamage: 10,
         execute(state){
           let lostCitizens = Math.ceil((state.citizenCount || 0) / 2);
           state.citizenCount = Math.max(0, (state.citizenCount || 0) - lostCitizens);
@@ -348,7 +348,7 @@
             guttedCount = targetCount;
           }
 
-          let logText = `${this.name}:気力-20 市民${lostCitizens}人が離脱`;
+          let logText = `${this.name}:気力-10 市民${lostCitizens}人が離脱`;
           addLog(logText, true);
         }
       },
@@ -910,6 +910,11 @@
       
       if(skill.playerDamage > 0){
         gameState.playerHp = Math.max(0, gameState.playerHp - skill.playerDamage);
+      }
+      const healAmount = 100;
+      if (gameState.enemyHp < gameState.enemyMaxHp) {
+        gameState.enemyHp = Math.min(gameState.enemyMaxHp, gameState.enemyHp + healAmount);
+        addLog(`権威の威信回復：権威+${healAmount}`, true);
       }
 
       gameState.nextEnemySkill = getRandomEnemySkill();
