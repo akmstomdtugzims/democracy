@@ -758,6 +758,9 @@
       if(totalEnemyDmg > 0) gameState.enemyHp = Math.max(0, gameState.enemyHp - Math.floor(totalEnemyDmg));
       if(totalPlayerHeal > 0) gameState.playerHp = Math.min(gameState.playerMaxHp, gameState.playerHp + Math.floor(totalPlayerHeal));
 
+      renderGrid();
+      
+      
       let matches = checkMatches(gameState.grid);
       if (matches.length > 0) {
         matches.forEach(({ r, c }) => {
