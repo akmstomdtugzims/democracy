@@ -332,12 +332,27 @@
       {
         id: 'Intimidation',
         name: '脅迫議員【インフラ予算カット】',
-        description: '市民数を減少',
+        description: '市民数の減少',
         playerDamage: 20,
         execute(state){
           let lostCitizens = Math.ceil((state.citizenCount || 0) / 2);
           state.citizenCount = Math.max(0, (state.citizenCount || 0) - lostCitizens);
-          addLog(`${this.name}:気力-20 市民が${lostCitizens}人離脱（残り${state.citizenCount}人）`, true);
+          let activeCitizenMembers = state.party.filter(m => m && m.jobId === 'citizen' && !m.Gutted);
+          
+          let guttedCount = 0;
+          if(activeCitizenMembers.length > 0){
+            let targetCount = Math.ceil(activeCitizenMembers.length / 2);
+            activeCitizenMembers.slice(0, targetCount).forEach(m => {
+              m.Gutted = true;
+            });
+            guttedCount = targetCount;
+          }
+
+          let logText = `${this.name}:気力-20 市民${lostCitizens}人が離脱`;
+          if(guttedCount > 0){
+            logText += ` ${guttedCount}名が骨抜きになった`;
+          }
+          addLog(logText, true);
         }
       },
     ];
