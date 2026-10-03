@@ -95,8 +95,8 @@
       
       <div class="flex items-center justify-between pt-0.5 gap-1">
         <div class="flex-1 min-w-0 flex flex-col justify-center text-[9px] font-bold text-gray-800 leading-tight">
-          <div id="party-counts-display" class="truncate">属性: 市民5</div>
-          <div id="party-effects-display" class="whitespace-nowrap overflow-hidden text-gray-600">効果: 全体効果+50%</div>
+          <div id="party-counts-display" class="truncate">属性: -</div>
+          <div id="party-effects-display" class="whitespace-nowrap overflow-hidden text-gray-600">効果:-</div>
         </div>
         <div class="flex items-center space-x-1 flex-shrink-0">
           <button id="btn-random-party" class="flat-btn px-1.5 py-0.5 text-[9px]">ランダム</button>
@@ -227,10 +227,10 @@
     const BASIC_BLOCK_KEYS = ['question', 'report', 'verify', 'sign', 'demo', 'dialogue'];
 
     const JOBS = {
-      citizen:   { id: 'citizen',    name: '市民',   skillName: '連帯',         desc: '市民数が増えるほど全体効果UP', boostBlock: 'question', icons: ['🧑‍💼', '👨‍💼', '👩‍🍳', '🧑‍🌾', '🧑‍🎨'] },
+      citizen:   { id: 'citizen',    name: '市民',   skillName: '連帯',         desc: '市民が多いほど全体効果UP', boostBlock: 'question', icons: ['🧑‍💼', '👨‍💼', '👩‍🍳', '🧑‍🌾', '🧑‍🎨'] },
       reporter:  { id: 'reporter',   name: '記者',   skillName: '報道の自由',     desc: '「報道」スキル必要ブロック減', boostBlock: 'report', icons: ['🕵️', '🕵️‍♂️'] },
       expert:    { id: 'expert',     name: '専門家', skillName: '客観性の担保',   desc: '毎ターン「虚偽」1訂正', boostBlock: 'verify', icons: ['👩‍💻', '🧑‍💻'] },
-      lawyer:    { id: 'lawyer',     name: '弁護士', skillName: '社会正義の実現', desc: '毎ターン「非開示」or「虚偽」1解除', boostBlock: 'sign', icons: ['👩‍⚖️', '👨‍⚖️️'] },
+      lawyer:    { id: 'lawyer',     name: '弁護士', skillName: '社会正義の実現', desc: '毎ターン「非開示」or「虚偽」1解除', boostBlock: 'sign', icons: ['👩‍⚖️', '👨‍⚖'] },
       politician:{ id: 'politician', name: '政治家', skillName: '公共の福祉',     desc: '「対話」効果UP', boostBlock: 'dialogue', icons: ['👩‍💼', '👨‍💼'] }
     };
 
@@ -328,7 +328,18 @@
           state.cabinetDecisionTurns = 2;
           addLog(`${this.name}:気力-15 「検証」を無効化（2ターン継続）`, true);
         }
-      }
+      },
+      {
+        id: 'Intimidation',
+        name: '脅迫議員【インフラ予算カット】',
+        description: '市民数を減少',
+        playerDamage: 20,
+        execute(state){
+          let lostCitizens = Math.ceil((state.citizenCount || 0) / 2);
+          state.citizenCount = Math.max(0, (state.citizenCount || 0) - lostCitizens);
+          addLog(`${this.name}:気力-20 市民が${lostCitizens}人離脱（残り${state.citizenCount}人）`, true);
+        }
+      },
     ];
 
     let gameState = {
@@ -625,10 +636,17 @@
         await processCascade(comboCount + 1);
       } else{
         if(gameState.pendingDemoReset){
-          gameState.citizenCount = gameState.party.filter(m => m && m.jobId === 'citizen').length;
+          if(gameState.gainedCitizenAfterDemo){
+          } else {
+            if(gameState.citizenCount > 0){
+              addLog(`デモに参加した市民はいったん帰った`);
+            }
+            gameState.citizenCount = 0;
+          }
           gameState.pendingDemoReset = false;
-          addLog(`「デモ」終了 集まっていた市民が解散した`);
+          gameState.gainedCitizenAfterDemo = false;
         }
+
         await endTurnSequence();
       }
     }
@@ -671,7 +689,6 @@
       let activeSpecialists = gameState.party.filter(m => m && !m.Gutted && m.jobId !== 'citizen').length;
       let totalEnemyDmg = 0, totalPlayerHeal = 0;
       let prefix = comboCount > 1 ? '【コンボ】' : '';
-      let needCascadeCheck = false;
 
       const priorityOrder = ['dialogue', 'report', 'verify', 'question', 'sign', 'demo', 'fake'];
 
@@ -684,6 +701,9 @@
           let dmg = count * 50 * solidarityMultiplier;
           totalEnemyDmg += dmg;
           gameState.citizenCount = Math.min(10, gameState.citizenCount + 1);
+          if (gameState.pendingDemoReset) {
+            gameState.gainedCitizenAfterDemo = true;
+          }
           addLog(`${prefix}「疑問」発露 権威-${Math.floor(dmg)}（市民+1）`);
 
         } else if(type === 'report'){
@@ -707,7 +727,6 @@
 
             let removedCount = removeAllBlocksOfTypes(['fake']);
             let removeLogText = removedCount > 0 ? ` 虚偽${removedCount}消去` : '';
-            if(removedCount > 0) needCascadeCheck = true;
 
             addLog(`${prefix}「検証」実施 権威-${Math.floor(dmg)}${removeLogText}`);
 
@@ -732,13 +751,13 @@
           let dmg = activeSpecialists * gameState.citizenCount * 20 * solidarityMultiplier;
           totalEnemyDmg += dmg;
           gameState.pendingDemoReset = true;
+          gameState.gainedCitizenAfterDemo = false;
           addLog(`${prefix}「デモ」参加 権威-${Math.floor(dmg)}`);
 
         } else if(type === 'dialogue'){
           if(isGutted('politician')){
             addLog(`政治家(保身)：対話回復量0`);
           } else{
-          
             let healVal = count *(activeJobs.includes('politician') ? 10 : 5) * solidarityMultiplier;
             totalPlayerHeal += healVal;
             addLog(`${prefix}「対話」成立 気力+${Math.floor(healVal)}`);
@@ -747,52 +766,19 @@
             gameState.party.forEach(m =>{ if(m) m.Gutted = false; });
             addLog(`${prefix}「対話」成立 「骨抜き」状態を解除`);
           }
+          
         } else if(type === 'fake'){
           let playerDmg = count * 10;
           gameState.playerHp = Math.max(0, gameState.playerHp - playerDmg);
           addLog(`${prefix}「虚偽」受容 気力-${playerDmg}`, true);
         }
       }
-      await getRandomBlockByDropRate();
-
+      
       if(totalEnemyDmg > 0) gameState.enemyHp = Math.max(0, gameState.enemyHp - Math.floor(totalEnemyDmg));
       if(totalPlayerHeal > 0) gameState.playerHp = Math.min(gameState.playerMaxHp, gameState.playerHp + Math.floor(totalPlayerHeal));
 
       renderGrid();
-      
-      
-      let matches = checkMatches(gameState.grid);
-      if (matches.length > 0) {
-        matches.forEach(({ r, c }) => {
-          gameState.grid[r][c] = null;
-        });
-        
-        for (let c = 0; c < GRID_SIZE; c++) {
-          for (let r = GRID_SIZE - 1; r >= 0; r--) {
-            if (gameState.grid[r][c] === null) {
-              for (let above = r - 1; above >= 0; above--) {
-                if (gameState.grid[above][c] !== null) {
-                  gameState.grid[r][c] = gameState.grid[above][c];
-                  gameState.grid[above][c] = null;
-                  break;
-                }
-              }
-              if (gameState.grid[r][c] === null) {
-                gameState.grid[r][c] = getRandomBlockByDropRate();
-              }
-            }
-          }
-        }
-      }
-
-      renderGrid();
-      
-      if(checkMatches(gameState.grid).length > 0) {
-        await processCascade(comboCount + 1);
-      } else {
-        gameState.isProcessing = false;
-      }
-        }
+    }
 
     function convertRandomBlocks(fromType, toType, maxCount){
       let targets = [];
@@ -1032,10 +1018,10 @@
       let bonusCitizens = Math.max(0, gameState.citizenCount - constituentCitizens);
       let countsArr = [];
       Object.keys(counts).forEach(k =>{
-        if(k === '市民') countsArr.push(`市民数${constituentCitizens}(+${bonusCitizens})`);
+        if(k === '市民') countsArr.push(`市民${gameState.citizenCount || 0}(${constituentCitizens}+${bonusCitizens})`);
         else countsArr.push(`${k}${counts[k]}`);
       });
-      if(!counts['市民']) countsArr.unshift(`市民数${constituentCitizens}(+${bonusCitizens})`);
+      if(!counts['市民']) countsArr.unshift(`市民${gameState.citizenCount || 0}(${constituentCitizens}+${bonusCitizens})`);
 
       document.getElementById('party-counts-display').textContent = countsArr.join(' ');
 
