@@ -349,9 +349,6 @@
           }
 
           let logText = `${this.name}:気力-20 市民${lostCitizens}人が離脱`;
-          if(guttedCount > 0){
-            logText += ` ${guttedCount}名が骨抜きになった`;
-          }
           addLog(logText, true);
         }
       },
@@ -651,12 +648,15 @@
         await processCascade(comboCount + 1);
       } else{
         if(gameState.pendingDemoReset){
+          let constituentCitizens = gameState.party.filter(m => m && m.jobId === 'citizen' && !m.Gutted).length;
+          let bonusCitizens = Math.max(0, gameState.citizenCount - constituentCitizens);
+
           if(gameState.gainedCitizenAfterDemo){
           } else {
-            if(gameState.citizenCount > 0){
+            if(bonusCitizens > 0){
               addLog(`デモに参加した市民はいったん帰った`);
             }
-            gameState.citizenCount = 0;
+            gameState.citizenCount = constituentCitizens;
           }
           gameState.pendingDemoReset = false;
           gameState.gainedCitizenAfterDemo = false;
